@@ -29,6 +29,7 @@ import {
 } from '../types';
 import { getStarterDeck } from '../data/cards';
 import { getTotalLessonBonus, FACILITIES } from '../data/facilities';
+import { checkScenarioConditions, ScenarioEvent } from '../data/scenarios';
 
 // ===========================
 // ユーティリティ関数
@@ -160,6 +161,7 @@ interface GameStore extends GameState {
   setCurrentEvent: (event: GameEvent | null) => void;
   processEventChoice: (choice: EventChoice) => void;
   setScenarioFlag: (flagName: string, value: boolean) => void;
+  checkScenarioEvent: () => ScenarioEvent | null;
 
   // 設備
   purchaseFacility: (facilityId: string) => boolean;
@@ -859,6 +861,36 @@ export const useGameStore = create<GameStore>()(
             },
           },
         });
+      },
+
+      checkScenarioEvent: () => {
+        const session = get().currentSession;
+        if (!session) return null;
+
+        // 現在のステータスを収集
+        const currentWeek = session.currentWeek;
+        const stats = session.character.stats;
+        const flags = session.scenario.flags;
+        const currentRank = session.character.rank;
+        const fame = session.fame;
+
+        // サポートキャラの絆レベルを収集
+        const supportBonds: Record<string, number> = {};
+        session.supportDeck.forEach((support) => {
+          supportBonds[support.character.id] = support.bondLevel;
+        });
+
+        // シナリオイベントをチェック
+        const scenarioEvent = checkScenarioConditions(
+          currentWeek,
+          stats,
+          flags,
+          currentRank,
+          fame,
+          supportBonds
+        );
+
+        return scenarioEvent;
       },
 
       // === 設備 ===

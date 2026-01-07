@@ -472,13 +472,127 @@
   min-height: 100vh;
   padding: 24px;
   text-align: center;
-  gap: 24px;
+  gap: 32px;
   background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
 }
 
-.training-complete h2 {
-  font-size: 32px;
+.training-complete__ending {
+  border: 3px solid;
+  border-radius: 16px;
+  padding: 24px 48px;
+  background: rgba(30, 41, 59, 0.8);
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.training-complete__ending h2 {
+  font-size: 28px;
+  margin: 0 0 12px 0;
+  text-shadow: 0 0 20px currentColor;
+}
+
+.training-complete__message {
+  font-size: 16px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.training-complete__character {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: fadeInUp 0.8s ease-out 0.2s both;
+}
+
+.training-complete__character h3 {
+  font-size: 24px;
   color: #f1f5f9;
+  margin: 0;
+}
+
+.training-complete__rank {
+  font-size: 48px;
+  font-weight: bold;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.5);
+}
+
+.training-complete__rank[data-rank="SSS"] {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  box-shadow: 0 4px 20px rgba(251, 191, 36, 0.5);
+}
+
+.training-complete__rank[data-rank="SS"] {
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  box-shadow: 0 4px 20px rgba(168, 85, 247, 0.5);
+}
+
+.training-complete__rank[data-rank="S"] {
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+  box-shadow: 0 4px 20px rgba(236, 72, 153, 0.5);
+}
+
+.training-complete__stats-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 500px;
+  animation: fadeInUp 0.8s ease-out 0.4s both;
+}
+
+.training-complete__stats-grid {
+  padding-bottom: 16px;
+  border-bottom: 1px solid #334155;
+}
+
+.training-complete__stats-info {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.training-complete__stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+
+.training-complete__stat-item .label {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.training-complete__stat-item .value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #f1f5f9;
+}
+
+.training-complete__actions {
+  animation: fadeInUp 0.8s ease-out 0.6s both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* オーディション画面 */

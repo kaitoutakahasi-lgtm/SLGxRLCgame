@@ -94,14 +94,21 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ onComplete }) => {
   );
 
   if (phase === 'result' && battleResult) {
+    const resultClass =
+      battleResult.winner === 'player'
+        ? 'battle-result--win'
+        : battleResult.winner === 'opponent'
+        ? 'battle-result--lose'
+        : 'battle-result--draw';
+
     return (
-      <div className="battle-result">
+      <div className={`battle-result ${resultClass}`}>
         <h2>
           {battleResult.winner === 'player'
-            ? '勝利！'
+            ? 'Victory!'
             : battleResult.winner === 'opponent'
-            ? '敗北...'
-            : '引き分け'}
+            ? 'Defeat...'
+            : 'Draw'}
         </h2>
         <div className="battle-result__score">
           <div className="battle-result__player">
@@ -115,11 +122,17 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ onComplete }) => {
           </div>
         </div>
         <div className="battle-result__rewards">
-          <h3>報酬</h3>
-          <p>ゴールド: +{battleResult.rewards.gold}G</p>
-          <p>知名度: +{battleResult.rewards.fame}</p>
+          <h3>獲得報酬</h3>
+          <p>
+            ゴールド: <strong>+{battleResult.rewards.gold}G</strong>
+          </p>
+          <p>
+            知名度: <strong>+{battleResult.rewards.fame}</strong>
+          </p>
         </div>
-        <Button onClick={handleEndBattle}>続ける</Button>
+        <div className="battle-result__actions">
+          <Button onClick={handleEndBattle}>続ける</Button>
+        </div>
       </div>
     );
   }

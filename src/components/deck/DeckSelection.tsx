@@ -7,8 +7,13 @@ import {
   SupportCharacter,
   SupportBonus,
   Style,
+  FixedCharacter,
   BOND_THRESHOLDS,
 } from '../../types';
+import {
+  FIXED_CHARACTERS,
+  FIXED_CHARACTER_BONUSES,
+} from '../../data/fixedCharacters';
 import './DeckSelection.css';
 
 interface DeckSelectionProps {
@@ -98,8 +103,10 @@ export const DeckSelection: React.FC<DeckSelectionProps> = ({
 
   const [selectedSupports, setSelectedSupports] = useState<string[]>([]);
 
-  // 育成対象以外のキャラクターをリストアップ
-  const availableCharacters = [
+  // 育成対象以外のキャラクターをリストアップ（固有キャラ含む）
+  type AvailableCharacter = EditCharacter | TrainedCharacter | FixedCharacter;
+  const availableCharacters: AvailableCharacter[] = [
+    ...FIXED_CHARACTERS,
     ...editCharacters.filter((c) => c.id !== selectedCharacter.id),
     ...trainedCharacters,
   ];
@@ -114,13 +121,30 @@ export const DeckSelection: React.FC<DeckSelectionProps> = ({
 
   const handleConfirm = () => {
     const supportDeck: SupportCharacter[] = selectedSupports.map((id) => {
-      const character =
-        availableCharacters.find((c) => c.id === id) as
-          | EditCharacter
-          | TrainedCharacter;
-      const bonus = createSupportBonus(character);
+      const character = availableCharacters.find((c) => c.id === id)!;
+
+      // 固有キャラの場合は専用ボーナスとキズナイベントを使用
+      if (character.type === 'fixed') {
+        const fixedChar = character as FixedCharacter;
+        const bonus = FIXED_CHARACTER_BONUSES[fixedChar.id];
+        return {
+          character: fixedChar,
+          bondLevel: bonus.initialBond,
+          bonus,
+          bondProgress: {
+            event1Cleared: false,
+            event2Cleared: false,
+            event3Cleared: false,
+          },
+          bondEvents: fixedChar.bondEvents,
+          isInTraining: false,
+        };
+      }
+
+      // 育成済み・オリジナルキャラ
+      const bonus = createSupportBonus(character as EditCharacter | TrainedCharacter);
       return {
-        character,
+        character: character as EditCharacter | TrainedCharacter,
         bondLevel: bonus.initialBond,
         bonus,
         bondProgress: {
@@ -168,7 +192,11 @@ export const DeckSelection: React.FC<DeckSelectionProps> = ({
                       {character.name}
                     </span>
                     <span className="deck-selection__slot-type">
-                      {character.type === 'trained' ? '育成済み' : 'オリジナル'}
+                      {character.type === 'fixed'
+                        ? '固有'
+                        : character.type === 'trained'
+                        ? '育成済み'
+                        : 'オリジナル'}
                     </span>
                   </div>
                 ) : (
@@ -192,6 +220,19 @@ export const DeckSelection: React.FC<DeckSelectionProps> = ({
             {availableCharacters.map((character) => {
               const isSelected = selectedSupports.includes(character.id);
               const isTrained = character.type === 'trained';
+              const isFixed = character.type === 'fixed';
+
+              // 固有キャラの得意スタイル名を日本語化
+              const getStyleName = (style: Style): string => {
+                const names: Record<Style, string> = {
+                  cool: 'クール',
+                  elegant: 'エレガント',
+                  cute: 'キュート',
+                  clever: 'クレバー',
+                  passion: 'パッション',
+                };
+                return names[style];
+              };
 
               return (
                 <Card
@@ -204,12 +245,24 @@ export const DeckSelection: React.FC<DeckSelectionProps> = ({
                       <strong>{character.name}</strong>
                       <span
                         className={`deck-selection__character-type ${
-                          isTrained ? 'trained' : 'edit'
+                          isFixed ? 'fixed' : isTrained ? 'trained' : 'edit'
                         }`}
                       >
-                        {isTrained ? '育成済み' : 'オリジナル'}
+                        {isFixed ? '固有' : isTrained ? '育成済み' : 'オリジナル'}
                       </span>
                     </div>
+                    {isFixed && (
+                      <div className="deck-selection__character-stats">
+                        <span>
+                          得意:{' '}
+                          {getStyleName(
+                            FIXED_CHARACTER_BONUSES[(character as FixedCharacter).id]
+                              ?.specialtyStyle || 'passion'
+                          )}
+                        </span>
+                        <span>キズナイベント有</span>
+                      </div>
+                    )}
                     {isTrained && (
                       <div className="deck-selection__character-stats">
                         <span>
@@ -222,7 +275,11 @@ export const DeckSelection: React.FC<DeckSelectionProps> = ({
                       </div>
                     )}
                     <div className="deck-selection__character-bonus">
-                      {isTrained ? (
+                      {isFixed ? (
+                        <span>
+                          レッスン+15% / 絆+20%
+                        </span>
+                      ) : isTrained ? (
                         <span>
                           レッスン+
                           {(character as TrainedCharacter).finalRank === 'SSS'

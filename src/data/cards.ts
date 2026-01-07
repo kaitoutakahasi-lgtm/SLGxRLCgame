@@ -304,6 +304,153 @@ export const BASIC_CARDS: Card[] = [
     effects: [{ type: 'discard', value: 1, target: 'opponent' }],
   },
 
+  // === Bランク中級カード ===
+  {
+    id: 'cool_intermediate_1',
+    name: 'アイスブレード',
+    description: '冷たい視線で相手を圧倒',
+    category: 'appeal',
+    style: 'cool',
+    cost: 2,
+    requiredRank: 'B',
+    effects: [
+      { type: 'appeal', value: 4, target: 'self' },
+      { type: 'appeal', value: -1, target: 'opponent' },
+    ],
+  },
+  {
+    id: 'elegant_intermediate_1',
+    name: 'シルクヴェール',
+    description: '優雅な動きで妨害を防ぐ',
+    category: 'defense',
+    style: 'elegant',
+    cost: 2,
+    requiredRank: 'B',
+    effects: [
+      { type: 'appeal', value: 3, target: 'self' },
+      { type: 'nullify', value: 1, target: 'self' },
+    ],
+  },
+  {
+    id: 'cute_intermediate_1',
+    name: 'ハートビート',
+    description: '心をつかむ可愛らしさ',
+    category: 'appeal',
+    style: 'cute',
+    cost: 2,
+    requiredRank: 'B',
+    effects: [
+      { type: 'appeal', value: 3, target: 'self' },
+      { type: 'stamina', value: 1, target: 'self' },
+    ],
+  },
+  {
+    id: 'clever_intermediate_1',
+    name: 'マインドゲーム',
+    description: '知略で相手を翻弄',
+    category: 'manipulation',
+    style: 'clever',
+    cost: 2,
+    requiredRank: 'B',
+    effects: [
+      { type: 'appeal', value: 2, target: 'self' },
+      { type: 'draw', value: 1, target: 'self' },
+      { type: 'discard', value: 1, target: 'opponent' },
+    ],
+  },
+  {
+    id: 'passion_intermediate_1',
+    name: 'イグニッション',
+    description: '燃え上がる情熱',
+    category: 'appeal',
+    style: 'passion',
+    cost: 2,
+    requiredRank: 'B',
+    effects: [
+      { type: 'appeal', value: 3, target: 'self' },
+      { type: 'voltage', value: 1, target: 'self' },
+    ],
+  },
+
+  // === ユーティリティカード ===
+  {
+    id: 'utility_recover_1',
+    name: 'リフレッシュ',
+    description: 'スタミナを大きく回復',
+    category: 'defense',
+    style: 'elegant',
+    cost: 1,
+    requiredRank: 'C',
+    effects: [{ type: 'stamina', value: 2, target: 'self' }],
+  },
+  {
+    id: 'utility_focus_1',
+    name: '集中',
+    description: '次のアピールを強化',
+    category: 'manipulation',
+    style: 'clever',
+    cost: 1,
+    requiredRank: 'C',
+    effects: [
+      { type: 'draw', value: 1, target: 'self' },
+      { type: 'voltage', value: 1, target: 'self' },
+    ],
+  },
+  {
+    id: 'utility_cheer_1',
+    name: 'チアアップ',
+    description: 'ボルテージを大きく獲得',
+    category: 'appeal',
+    style: 'cute',
+    cost: 2,
+    requiredRank: 'B',
+    effects: [
+      { type: 'appeal', value: 1, target: 'self' },
+      { type: 'voltage', value: 2, target: 'self' },
+    ],
+  },
+
+  // === コンボカード ===
+  {
+    id: 'combo_dual_appeal_1',
+    name: 'デュアルスタイル',
+    description: '2つのスタイルでアピール',
+    category: 'conditional',
+    style: 'elegant',
+    cost: 2,
+    requiredRank: 'B',
+    effects: [
+      { type: 'appeal', value: 2, target: 'self' },
+      { type: 'appeal', value: 2, target: 'self', condition: { type: 'trend_match', style: 'cool' } },
+    ],
+  },
+  {
+    id: 'combo_voltage_burst_1',
+    name: 'ボルテージバースト',
+    description: 'ボルテージに応じてアピール増加',
+    category: 'conditional',
+    style: 'passion',
+    cost: 2,
+    requiredRank: 'A',
+    effects: [
+      { type: 'appeal', value: 2, target: 'self' },
+      { type: 'appeal', value: 3, target: 'self', condition: { type: 'voltage_above', value: 5 } },
+    ],
+  },
+  {
+    id: 'combo_finisher_1',
+    name: 'フィニッシャー',
+    description: 'ターン終盤に真価を発揮',
+    category: 'conditional',
+    style: 'cool',
+    cost: 3,
+    requiredRank: 'A',
+    effects: [
+      { type: 'appeal', value: 3, target: 'self' },
+      { type: 'appeal', value: 4, target: 'self', condition: { type: 'last_turn' } },
+    ],
+  },
+
   // === 上位カード ===
   {
     id: 'ultimate_appeal_1',

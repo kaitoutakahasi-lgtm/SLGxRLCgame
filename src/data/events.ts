@@ -522,6 +522,248 @@ export const BOND_EVENTS: GameEvent[] = [
   },
 ];
 
+// 週間イベント（特定の週に発生）
+export const WEEKLY_EVENTS: GameEvent[] = [
+  {
+    id: 'weekly_start_1',
+    name: '初めての一歩',
+    description: '育成が始まった',
+    eventType: 'weekly',
+    dialogue: [
+      '「よろしくお願いします、プロデューサーさん！」',
+      'アイドルとしての第一歩が始まった。',
+      '期待と不安が入り混じる表情をしている。',
+    ],
+    triggerCondition: { type: 'week', week: 1 },
+    choices: [
+      {
+        id: 'weekly_start_1_a',
+        text: '一緒に頑張ろう',
+        effects: [
+          { type: 'condition', target: 'motivation', value: 20 },
+          { type: 'condition', target: 'mental', value: 10 },
+        ],
+      },
+      {
+        id: 'weekly_start_1_b',
+        text: '厳しくいくよ',
+        effects: [
+          { type: 'stats', target: 'passion', value: 10 },
+          { type: 'condition', target: 'motivation', value: 10 },
+        ],
+      },
+    ],
+    isRepeatable: false,
+    priority: 100,
+  },
+  {
+    id: 'weekly_mid_1',
+    name: '折り返し地点',
+    description: '育成の折り返し地点に来た',
+    eventType: 'weekly',
+    dialogue: [
+      '「もう半分まで来たんですね…」',
+      '振り返ると、成長を実感できる。',
+      '「後半も頑張りましょう！」',
+    ],
+    triggerCondition: { type: 'week', week: 13 },
+    choices: [
+      {
+        id: 'weekly_mid_1_a',
+        text: 'ここからが本番だ',
+        effects: [
+          { type: 'condition', target: 'motivation', value: 25 },
+          { type: 'stats', target: 'passion', value: 10 },
+        ],
+      },
+      {
+        id: 'weekly_mid_1_b',
+        text: '今までの成果を確認しよう',
+        effects: [
+          { type: 'condition', target: 'mental', value: 15 },
+          { type: 'stats', target: 'clever', value: 10 },
+        ],
+      },
+    ],
+    isRepeatable: false,
+    priority: 80,
+  },
+  {
+    id: 'weekly_final_1',
+    name: '最後の週',
+    description: '育成最終週',
+    eventType: 'weekly',
+    dialogue: [
+      '「いよいよ最後の週ですね…」',
+      '今までの全てをぶつける時が来た。',
+      '「プロデューサーさん、最後まで見届けてください！」',
+    ],
+    triggerCondition: { type: 'week', week: 26 },
+    choices: [
+      {
+        id: 'weekly_final_1_a',
+        text: '最高のパフォーマンスを',
+        effects: [
+          { type: 'condition', target: 'motivation', value: 30 },
+          { type: 'stats', target: 'passion', value: 15 },
+          { type: 'stats', target: 'cool', value: 15 },
+        ],
+      },
+    ],
+    isRepeatable: false,
+    priority: 100,
+  },
+];
+
+// ラッキーイベント（良い効果のみ）
+export const LUCKY_EVENTS: GameEvent[] = [
+  {
+    id: 'lucky_sponsor_1',
+    name: 'スポンサー獲得',
+    description: 'スポンサーがついた',
+    eventType: 'random',
+    dialogue: [
+      '大手企業からスポンサーの申し出があった！',
+      '「ぜひ{name}さんをサポートさせてください」',
+      'これは大きなチャンスだ。',
+    ],
+    triggerCondition: { type: 'random', probability: 0.03 },
+    choices: [
+      {
+        id: 'lucky_sponsor_1_a',
+        text: '喜んで受ける',
+        effects: [
+          { type: 'gold', value: 500 },
+          { type: 'fame', value: 30 },
+          { type: 'condition', target: 'motivation', value: 20 },
+        ],
+      },
+    ],
+    isRepeatable: false,
+    priority: 70,
+  },
+  {
+    id: 'lucky_viral_1',
+    name: 'バズり',
+    description: 'SNSで話題になった',
+    eventType: 'random',
+    dialogue: [
+      '{name}の動画がSNSでバズった！',
+      '再生数がどんどん伸びている。',
+      '「えっ、すごい！見てくださいプロデューサーさん！」',
+    ],
+    triggerCondition: { type: 'random', probability: 0.04 },
+    choices: [
+      {
+        id: 'lucky_viral_1_a',
+        text: 'この調子で頑張ろう',
+        effects: [
+          { type: 'fame', value: 50 },
+          { type: 'condition', target: 'motivation', value: 25 },
+        ],
+      },
+    ],
+    isRepeatable: false,
+    priority: 60,
+  },
+  {
+    id: 'lucky_talent_1',
+    name: '才能開花',
+    description: '隠れた才能が開花した',
+    eventType: 'random',
+    dialogue: [
+      '「あれ？なんかすごく調子がいい！」',
+      '{name}の動きが見違えるように良くなった。',
+      '秘めた才能が開花したようだ。',
+    ],
+    triggerCondition: { type: 'random', probability: 0.02 },
+    choices: [
+      {
+        id: 'lucky_talent_1_a',
+        text: 'この感覚を忘れないで',
+        effects: [
+          { type: 'stats', target: 'cool', value: 15 },
+          { type: 'stats', target: 'elegant', value: 15 },
+          { type: 'stats', target: 'cute', value: 15 },
+          { type: 'stats', target: 'clever', value: 15 },
+          { type: 'stats', target: 'passion', value: 15 },
+        ],
+      },
+    ],
+    isRepeatable: false,
+    priority: 90,
+  },
+];
+
+// トラブルイベント（対処が必要）
+export const TROUBLE_EVENTS: GameEvent[] = [
+  {
+    id: 'trouble_rumor_1',
+    name: '噂',
+    description: '良くない噂が流れている',
+    eventType: 'random',
+    dialogue: [
+      'ネット上で{name}についての良くない噂が流れている。',
+      '「プロデューサーさん、これ…」',
+      '不安そうな表情をしている。',
+    ],
+    triggerCondition: { type: 'random', probability: 0.03 },
+    choices: [
+      {
+        id: 'trouble_rumor_1_a',
+        text: '気にするな',
+        effects: [
+          { type: 'condition', target: 'mental', value: 10 },
+          { type: 'condition', target: 'motivation', value: -5 },
+        ],
+      },
+      {
+        id: 'trouble_rumor_1_b',
+        text: '対策を講じる',
+        effects: [
+          { type: 'gold', value: -200 },
+          { type: 'fame', value: -10 },
+          { type: 'condition', target: 'mental', value: 15 },
+        ],
+      },
+    ],
+    isRepeatable: false,
+    priority: 70,
+  },
+  {
+    id: 'trouble_injury_1',
+    name: '怪我',
+    description: '練習中に怪我をした',
+    eventType: 'random',
+    dialogue: [
+      '「いたっ…！」',
+      '{name}が練習中に足を捻ってしまった。',
+      '大事には至らなさそうだが…',
+    ],
+    triggerCondition: { type: 'random', probability: 0.02 },
+    choices: [
+      {
+        id: 'trouble_injury_1_a',
+        text: 'しっかり休ませる',
+        effects: [
+          { type: 'condition', target: 'health', value: 20 },
+          { type: 'condition', target: 'fatigue', value: -20 },
+        ],
+      },
+      {
+        id: 'trouble_injury_1_b',
+        text: '軽く練習を続ける',
+        effects: [
+          { type: 'condition', target: 'health', value: -10 },
+          { type: 'stats', target: 'passion', value: 10 },
+        ],
+      },
+    ],
+    isRepeatable: true,
+    priority: 85,
+  },
+];
+
 // ===========================
 // ヘルパー関数
 // ===========================
@@ -556,7 +798,22 @@ export const getRandomEvent = (
     (e) => !completedEvents.includes(e.id)
   );
 
-  const allEvents = [...availablePersonalityEvents, ...availableCommonEvents];
+  // ラッキーイベントチェック
+  const availableLuckyEvents = LUCKY_EVENTS.filter(
+    (e) => !completedEvents.includes(e.id)
+  );
+
+  // トラブルイベントチェック
+  const availableTroubleEvents = TROUBLE_EVENTS.filter(
+    (e) => e.isRepeatable || !completedEvents.includes(e.id)
+  );
+
+  const allEvents = [
+    ...availablePersonalityEvents,
+    ...availableCommonEvents,
+    ...availableLuckyEvents,
+    ...availableTroubleEvents,
+  ];
 
   for (const event of allEvents) {
     if (
@@ -568,6 +825,20 @@ export const getRandomEvent = (
   }
 
   return null;
+};
+
+/** 週固定イベントを取得 */
+export const getWeeklyEvent = (
+  week: number,
+  completedEvents: string[]
+): GameEvent | null => {
+  const event = WEEKLY_EVENTS.find(
+    (e) =>
+      e.triggerCondition.type === 'week' &&
+      e.triggerCondition.week === week &&
+      !completedEvents.includes(e.id)
+  );
+  return event || null;
 };
 
 export const processDialogue = (

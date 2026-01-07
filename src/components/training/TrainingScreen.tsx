@@ -14,6 +14,7 @@ import {
   generateCardChoices,
 } from '../../data';
 import { FACILITIES, calculateFacilityUpgradeCost } from '../../data/facilities';
+import { determineEndingType } from '../../data/scenarios';
 import {
   Style,
   LessonAction,
@@ -23,6 +24,7 @@ import {
   EventChoice,
   BOND_THRESHOLDS,
   Card as CardType,
+  CharacterStats,
 } from '../../types';
 import './TrainingScreen.css';
 
@@ -52,6 +54,8 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
   const processEventChoice = useGameStore((state) => state.processEventChoice);
   const setCurrentEvent = useGameStore((state) => state.setCurrentEvent);
   const addCard = useGameStore((state) => state.addCard);
+  const checkScenarioEvent = useGameStore((state) => state.checkScenarioEvent);
+  const setScenarioFlag = useGameStore((state) => state.setScenarioFlag);
 
   const [activeTab, setActiveTab] = useState<ActionTab>('lesson');
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
@@ -93,6 +97,16 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
       setShowCardGaugeModal(true);
     }
   }, [cardGauge.current, cardGauge.max]);
+
+  // シナリオイベントチェック（週の開始時）
+  useEffect(() => {
+    if (currentEvent) return;
+
+    const scenarioEvent = checkScenarioEvent();
+    if (scenarioEvent) {
+      setCurrentEvent(scenarioEvent);
+    }
+  }, [currentWeek]);
 
   // キズナイベントトリガーチェック
   useEffect(() => {
@@ -185,6 +199,13 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
       const eventIndex = parseInt(eventIndexStr, 10);
       completeBondEvent(characterId, eventIndex, choice.id);
     } else {
+      // シナリオイベントの場合はunlockFlagをセット
+      if (currentEvent.eventType === 'scenario') {
+        const scenarioEvent = currentEvent as typeof currentEvent & { unlockFlag?: string };
+        if (scenarioEvent.unlockFlag) {
+          setScenarioFlag(scenarioEvent.unlockFlag, true);
+        }
+      }
       processEventChoice(choice);
     }
   };
@@ -212,11 +233,91 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
 
   // 育成終了チェック
   if (currentWeek > maxWeeks) {
+    // エンディングタイプを判定
+    const endingType = determineEndingType(
+      character.rank,
+      session.scenario.flags,
+      fame
+    );
+
+    // 最も高いスタイルを取得
+    const getBestStyle = (stats: CharacterStats): Style => {
+      const styles: Style[] = ['cool', 'elegant', 'cute', 'clever', 'passion'];
+      return styles.reduce((best, style) =>
+        stats[style] > stats[best] ? style : best
+      );
+    };
+    const bestStyle = getBestStyle(character.stats);
+
+    // エンディングメッセージ
+    const endingMessages: Record<string, { title: string; message: string; color: string }> = {
+      true: {
+        title: 'TRUE END - 頂点のステージ',
+        message: '全ての努力が実を結び、最高のアイドルが誕生した！',
+        color: '#fbbf24',
+      },
+      good: {
+        title: 'GOOD END - 輝くステージ',
+        message: '素晴らしいアイドルに成長した！これからも更なる高みを目指そう。',
+        color: '#4ade80',
+      },
+      normal: {
+        title: 'NORMAL END - 新たな一歩',
+        message: 'アイドルとしての道を歩み始めた。まだまだこれからだ！',
+        color: '#60a5fa',
+      },
+      bad: {
+        title: 'BAD END - 再挑戦',
+        message: '今回は上手くいかなかったが、諦めなければ道は開ける。',
+        color: '#94a3b8',
+      },
+    };
+    const ending = endingMessages[endingType];
+
+    // 総合ステータス
+    const totalStats = Object.values(character.stats).reduce((a, b) => a + b, 0);
+
     return (
       <div className="training-complete">
-        <h2>育成完了！</h2>
-        <StatDisplay stats={character.stats} rank={character.rank} />
-        <Button onClick={handleEndTraining}>結果を保存</Button>
+        <div className="training-complete__ending" style={{ borderColor: ending.color }}>
+          <h2 style={{ color: ending.color }}>{ending.title}</h2>
+          <p className="training-complete__message">{ending.message}</p>
+        </div>
+
+        <div className="training-complete__character">
+          <h3>{character.name}</h3>
+          <div className="training-complete__rank" data-rank={character.rank}>
+            {character.rank}
+          </div>
+        </div>
+
+        <div className="training-complete__stats-summary">
+          <div className="training-complete__stats-grid">
+            <StatDisplay stats={character.stats} rank={character.rank} />
+          </div>
+          <div className="training-complete__stats-info">
+            <div className="training-complete__stat-item">
+              <span className="label">総合ステータス</span>
+              <span className="value">{totalStats}</span>
+            </div>
+            <div className="training-complete__stat-item">
+              <span className="label">得意スタイル</span>
+              <span className="value">{getStyleName(bestStyle)}</span>
+            </div>
+            <div className="training-complete__stat-item">
+              <span className="label">獲得名声</span>
+              <span className="value">{fame}</span>
+            </div>
+            <div className="training-complete__stat-item">
+              <span className="label">取得カード</span>
+              <span className="value">{character.cards.length}枚</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="training-complete__actions">
+          <Button onClick={handleEndTraining}>結果を保存してホームへ</Button>
+        </div>
       </div>
     );
   }
