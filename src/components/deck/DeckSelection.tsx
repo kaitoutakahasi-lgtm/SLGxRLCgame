@@ -6,6 +6,8 @@ import {
   TrainedCharacter,
   SupportCharacter,
   SupportBonus,
+  Style,
+  BOND_THRESHOLDS,
 } from '../../types';
 import './DeckSelection.css';
 
@@ -35,22 +37,53 @@ const createSupportBonus = (
 
     return {
       lessonBonus: { [bestStyle]: bonusPercent },
-      eventBonus: 0,
-      cardBonus: 0,
       initialStats:
         trained.finalRank === 'SSS' || trained.finalRank === 'SS'
           ? { [bestStyle]: trained.finalRank === 'SSS' ? 100 : 50 }
           : {},
+      specialtyStyle: bestStyle,
+      specialtyRate: 30 + bonusPercent,
+      trainingEffectUp: bonusPercent,
+      friendshipBonus: bonusPercent,
+      friendshipThreshold: BOND_THRESHOLDS.FRIENDSHIP,
+      motivationEffectUp: 5,
+      fatigueReduction: 5,
+      conditionUp: 5,
+      eventRate: 10,
+      eventEffectUp: 10,
+      cardGaugeBonus: 5,
+      hintRate: 20,
+      hintEffectUp: 10,
+      goldBonus: 0,
+      fameBonus: 0,
+      contestBonus: 5,
+      initialBond: 5,
       facilityBonus: [],
     };
   }
 
   // エディットキャラの場合はデフォルトボーナス
+  const defaultStyle: Style = 'passion';
   return {
     lessonBonus: {},
-    eventBonus: 5,
-    cardBonus: 5,
     initialStats: {},
+    specialtyStyle: defaultStyle,
+    specialtyRate: 20,
+    trainingEffectUp: 5,
+    friendshipBonus: 10,
+    friendshipThreshold: BOND_THRESHOLDS.FRIENDSHIP,
+    motivationEffectUp: 5,
+    fatigueReduction: 5,
+    conditionUp: 5,
+    eventRate: 5,
+    eventEffectUp: 5,
+    cardGaugeBonus: 3,
+    hintRate: 10,
+    hintEffectUp: 5,
+    goldBonus: 0,
+    fameBonus: 0,
+    contestBonus: 3,
+    initialBond: 0,
     facilityBonus: [],
   };
 };
@@ -85,10 +118,17 @@ export const DeckSelection: React.FC<DeckSelectionProps> = ({
         availableCharacters.find((c) => c.id === id) as
           | EditCharacter
           | TrainedCharacter;
+      const bonus = createSupportBonus(character);
       return {
         character,
-        bondLevel: 0,
-        bonus: createSupportBonus(character),
+        bondLevel: bonus.initialBond,
+        bonus,
+        bondProgress: {
+          event1Cleared: false,
+          event2Cleared: false,
+          event3Cleared: false,
+        },
+        isInTraining: false,
       };
     });
 

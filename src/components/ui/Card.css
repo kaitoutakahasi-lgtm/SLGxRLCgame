@@ -1,9 +1,10 @@
 .card {
-  background: white;
+  background: rgba(30, 41, 59, 0.8);
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #334155;
   transition: all 0.2s ease;
+  color: #f1f5f9;
 }
 
 .card--clickable {
@@ -12,21 +13,23 @@
 
 .card--clickable:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #475569;
+  background: rgba(51, 65, 85, 0.8);
 }
 
 .card--selected {
-  border: 2px solid #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  border: 2px solid #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
 }
 
 .card--highlight {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  border-color: transparent;
 }
 
 .card--dark {
-  background: #1e293b;
-  color: white;
+  background: #0f172a;
+  border-color: #1e293b;
 }
 
 .card__title {
@@ -34,11 +37,13 @@
   font-weight: 700;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #334155;
+  color: #f1f5f9;
 }
 
-.card--dark .card__title {
-  border-bottom-color: #475569;
+.card--highlight .card__title {
+  border-bottom-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
 }
 
 .card__content {

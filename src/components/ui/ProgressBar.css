@@ -54,6 +54,14 @@
   background: linear-gradient(90deg, #a855f7 0%, #9333ea 100%);
 }
 
+.progress-bar__fill--cyan {
+  background: linear-gradient(90deg, #06b6d4 0%, #0891b2 100%);
+}
+
+.progress-bar__fill--pink {
+  background: linear-gradient(90deg, #ec4899 0%, #db2777 100%);
+}
+
 .progress-bar__value {
   font-size: 11px;
   color: #94a3b8;

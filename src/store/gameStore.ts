@@ -17,6 +17,15 @@ import {
   RANK_THRESHOLDS,
   RANK_ORDER,
   BattleResult,
+  GameEvent,
+  EventChoice,
+  BOND_THRESHOLDS,
+  CARD_GAUGE_MAX,
+  CARD_GAUGE_PER_LESSON,
+  CARD_GAUGE_PER_BOND_LESSON,
+  CardAcquisitionGauge,
+  SkillHint,
+  ScenarioProgress,
 } from '../types';
 import { getStarterDeck } from '../data/cards';
 import { getTotalLessonBonus, FACILITIES } from '../data/facilities';
@@ -55,6 +64,29 @@ const clamp = (value: number, min: number, max: number): number => {
   return Math.max(min, Math.min(max, value));
 };
 
+// 初期カードゲージ
+const createInitialCardGauge = (): CardAcquisitionGauge => ({
+  current: 0,
+  max: CARD_GAUGE_MAX,
+  pendingCards: [],
+});
+
+// 初期シナリオ進行
+const createInitialScenarioProgress = (): ScenarioProgress => ({
+  currentPhase: 1,
+  activeScenarioId: null,
+  completedBranches: [],
+  flags: {},
+});
+
+// サポートキャラ配置決定（各練習に何人いるか）
+const assignTrainingParticipants = (supportDeck: SupportCharacter[]): string[] => {
+  // ランダムに3〜6人を今週の練習に配置
+  const shuffled = [...supportDeck].sort(() => Math.random() - 0.5);
+  const count = Math.floor(Math.random() * 4) + 3; // 3〜6
+  return shuffled.slice(0, Math.min(count, shuffled.length)).map(s => s.character.id);
+};
+
 // ===========================
 // 初期状態
 // ===========================
@@ -71,6 +103,7 @@ const initialState: GameState = {
     seVolume: 0.8,
     textSpeed: 'normal',
     autoSave: true,
+    effectLevel: 'medium',
   },
 };
 
@@ -96,11 +129,37 @@ interface GameStore extends GameState {
   performLesson: (
     style: Style | 'all',
     baseEffect: number,
+    fatigue: number,
+    participantIds?: string[]
+  ) => void;
+  performBondLesson: (
+    supportCharacterId: string,
+    style: Style,
+    baseEffect: number,
+    bondBonus: number,
     fatigue: number
   ) => void;
   performRest: (fatigueRecovery: number, healthRecovery: number) => void;
   performBusiness: (gold: number, fame: number, motivation: number) => void;
   advanceWeek: () => void;
+
+  // キズナシステム
+  addBond: (characterId: string, amount: number) => void;
+  triggerBondEvent: (characterId: string, eventIndex: number) => GameEvent | null;
+  completeBondEvent: (characterId: string, eventIndex: number, choiceId: string) => void;
+  getSupportByCharacterId: (characterId: string) => SupportCharacter | undefined;
+  getAvailableBondLessons: () => { supportId: string; style: Style }[];
+
+  // カードゲージシステム
+  addCardGauge: (amount: number) => void;
+  checkCardGaugeFull: () => boolean;
+  claimCardFromGauge: (cardIndex: number) => Card | null;
+  addPendingCard: (card: Card) => void;
+
+  // イベントシステム
+  setCurrentEvent: (event: GameEvent | null) => void;
+  processEventChoice: (choice: EventChoice) => void;
+  setScenarioFlag: (flagName: string, value: boolean) => void;
 
   // 設備
   purchaseFacility: (facilityId: string) => boolean;
@@ -182,7 +241,7 @@ export const useGameStore = create<GameStore>()(
           actionSpeed: 5,
         };
 
-        // サポートボーナス適用
+        // サポートボーナス適用（初期ステータス）
         supportDeck.forEach((support) => {
           if (support.bonus.initialStats) {
             Object.entries(support.bonus.initialStats).forEach(([style, value]) => {
@@ -191,6 +250,8 @@ export const useGameStore = create<GameStore>()(
               }
             });
           }
+          // 初期絆レベル適用
+          support.bondLevel = support.bonus.initialBond || 0;
         });
 
         const session: TrainingSession = {
@@ -203,6 +264,11 @@ export const useGameStore = create<GameStore>()(
           facilities: [],
           completedEvents: [],
           auditionResults: [],
+          cardGauge: createInitialCardGauge(),
+          skillHints: [],
+          scenario: createInitialScenarioProgress(),
+          currentEvent: null,
+          trainingParticipants: assignTrainingParticipants(supportDeck),
         };
 
         set({
@@ -238,7 +304,7 @@ export const useGameStore = create<GameStore>()(
       },
 
       // === 週間行動 ===
-      performLesson: (style, baseEffect, fatigue) => {
+      performLesson: (style, baseEffect, fatigue, participantIds = []) => {
         const session = get().currentSession;
         if (!session) return;
 
@@ -254,8 +320,23 @@ export const useGameStore = create<GameStore>()(
           ? 0.6
           : 0.4;
 
+        // サポートボーナス計算
+        let supportBonus = 0;
+        const updatedSupportDeck = session.supportDeck.map((support) => {
+          if (participantIds.includes(support.character.id)) {
+            // 得意スタイル一致でボーナス
+            if (style !== 'all' && support.bonus.specialtyStyle === style) {
+              supportBonus += support.bonus.trainingEffectUp;
+            }
+            // 絆上昇
+            const newBondLevel = clamp(support.bondLevel + 2, 0, 100);
+            return { ...support, bondLevel: newBondLevel, isInTraining: true };
+          }
+          return { ...support, isInTraining: false };
+        });
+
         const finalEffect = Math.floor(
-          baseEffect * (1 + facilityBonus / 100 + motivationBonus) * fatigueEfficiency
+          baseEffect * (1 + facilityBonus / 100 + motivationBonus + supportBonus / 100) * fatigueEfficiency
         );
 
         const updatedStats = { ...session.character.stats };
@@ -275,9 +356,86 @@ export const useGameStore = create<GameStore>()(
           fatigue: clamp(session.character.condition.fatigue + fatigue, 0, 100),
         };
 
+        // カードゲージ上昇
+        const gaugeBonus = updatedSupportDeck.reduce((sum, s) =>
+          s.isInTraining ? sum + s.bonus.cardGaugeBonus : sum, 0
+        );
+        const newGaugeCurrent = clamp(
+          session.cardGauge.current + CARD_GAUGE_PER_LESSON + gaugeBonus,
+          0,
+          session.cardGauge.max
+        );
+
         set({
           currentSession: {
             ...session,
+            supportDeck: updatedSupportDeck,
+            cardGauge: {
+              ...session.cardGauge,
+              current: newGaugeCurrent,
+            },
+            character: {
+              ...session.character,
+              stats: updatedStats,
+              condition: updatedCondition,
+              rank: calculateRank(updatedStats),
+            },
+          },
+        });
+      },
+
+      performBondLesson: (supportCharacterId, style, baseEffect, bondBonus, fatigue) => {
+        const session = get().currentSession;
+        if (!session) return;
+
+        const supportIndex = session.supportDeck.findIndex(
+          s => s.character.id === supportCharacterId
+        );
+        if (supportIndex === -1) return;
+
+        const support = session.supportDeck[supportIndex];
+
+        // 友情トレーニング効果
+        const friendshipMultiplier = 1 + support.bonus.friendshipBonus / 100;
+        const motivationBonus = session.character.condition.motivation >= 80 ? 0.5 : 0;
+        const facilityBonus = getTotalLessonBonus(session.facilities, style);
+
+        const finalEffect = Math.floor(
+          baseEffect * friendshipMultiplier * (1 + facilityBonus / 100 + motivationBonus)
+        );
+
+        const updatedStats = { ...session.character.stats };
+        updatedStats[style] += finalEffect;
+
+        // 絆上昇（キズナ練習は通常より多い）
+        const newBondLevel = clamp(support.bondLevel + bondBonus, 0, 100);
+
+        const updatedSupportDeck = session.supportDeck.map((s, i) =>
+          i === supportIndex
+            ? { ...s, bondLevel: newBondLevel, isInTraining: true }
+            : { ...s, isInTraining: false }
+        );
+
+        const updatedCondition = {
+          ...session.character.condition,
+          fatigue: clamp(session.character.condition.fatigue + fatigue, 0, 100),
+        };
+
+        // カードゲージ上昇（キズナ練習は多め）
+        const newGaugeCurrent = clamp(
+          session.cardGauge.current + CARD_GAUGE_PER_BOND_LESSON + support.bonus.cardGaugeBonus,
+          0,
+          session.cardGauge.max
+        );
+
+        set({
+          currentSession: {
+            ...session,
+            supportDeck: updatedSupportDeck,
+            cardGauge: {
+              ...session.cardGauge,
+              current: newGaugeCurrent,
+            },
             character: {
               ...session.character,
               stats: updatedStats,
@@ -328,11 +486,19 @@ export const useGameStore = create<GameStore>()(
         const session = get().currentSession;
         if (!session) return;
 
+        // サポートボーナス
+        const goldMultiplier = session.supportDeck.reduce(
+          (sum, s) => sum + s.bonus.goldBonus, 0
+        ) / 100 + 1;
+        const fameMultiplier = session.supportDeck.reduce(
+          (sum, s) => sum + s.bonus.fameBonus, 0
+        ) / 100 + 1;
+
         set({
           currentSession: {
             ...session,
-            gold: session.gold + gold,
-            fame: session.fame + fame,
+            gold: session.gold + Math.floor(gold * goldMultiplier),
+            fame: session.fame + Math.floor(fame * fameMultiplier),
             character: {
               ...session.character,
               condition: {
@@ -359,10 +525,14 @@ export const useGameStore = create<GameStore>()(
             cafeteria.level
           : 0;
 
+        // 次週の練習参加者を決定
+        const newParticipants = assignTrainingParticipants(session.supportDeck);
+
         set({
           currentSession: {
             ...session,
             currentWeek: session.currentWeek + 1,
+            trainingParticipants: newParticipants,
             character: {
               ...session.character,
               condition: {
@@ -372,6 +542,319 @@ export const useGameStore = create<GameStore>()(
                   0,
                   100
                 ),
+              },
+            },
+          },
+        });
+      },
+
+      // === キズナシステム ===
+      addBond: (characterId, amount) => {
+        const session = get().currentSession;
+        if (!session) return;
+
+        const updatedSupportDeck = session.supportDeck.map((support) => {
+          if (support.character.id === characterId) {
+            return {
+              ...support,
+              bondLevel: clamp(support.bondLevel + amount, 0, 100),
+            };
+          }
+          return support;
+        });
+
+        set({
+          currentSession: {
+            ...session,
+            supportDeck: updatedSupportDeck,
+          },
+        });
+      },
+
+      triggerBondEvent: (characterId, eventIndex) => {
+        const session = get().currentSession;
+        if (!session) return null;
+
+        const support = session.supportDeck.find(s => s.character.id === characterId);
+        if (!support || !support.bondEvents) return null;
+
+        const bondEvents = support.bondEvents;
+        let event: GameEvent | null = null;
+
+        if (eventIndex === 1 && !support.bondProgress.event1Cleared) {
+          const bondEvent = bondEvents.event1;
+          event = {
+            id: bondEvent.id,
+            name: bondEvent.name,
+            description: bondEvent.description,
+            eventType: 'bond',
+            dialogue: bondEvent.dialogue,
+            triggerCondition: { type: 'bond', bondLevel: BOND_THRESHOLDS.EVENT_1, characterId },
+            choices: bondEvent.choices,
+            isRepeatable: false,
+            priority: 100,
+          };
+        } else if (eventIndex === 2 && !support.bondProgress.event2Cleared) {
+          const bondEvent = bondEvents.event2;
+          event = {
+            id: bondEvent.id,
+            name: bondEvent.name,
+            description: bondEvent.description,
+            eventType: 'bond',
+            dialogue: bondEvent.dialogue,
+            triggerCondition: { type: 'bond', bondLevel: BOND_THRESHOLDS.EVENT_2, characterId },
+            choices: bondEvent.choices,
+            isRepeatable: false,
+            priority: 100,
+          };
+        } else if (eventIndex === 3 && !support.bondProgress.event3Cleared) {
+          const bondEvent = bondEvents.event3;
+          event = {
+            id: bondEvent.id,
+            name: bondEvent.name,
+            description: bondEvent.description,
+            eventType: 'bond',
+            dialogue: bondEvent.dialogue,
+            triggerCondition: { type: 'bond', bondLevel: BOND_THRESHOLDS.EVENT_3, characterId },
+            choices: bondEvent.choices,
+            isRepeatable: false,
+            priority: 100,
+          };
+        }
+
+        if (event) {
+          set({
+            currentSession: {
+              ...session,
+              currentEvent: event,
+            },
+          });
+        }
+
+        return event;
+      },
+
+      completeBondEvent: (characterId, eventIndex, choiceId) => {
+        const session = get().currentSession;
+        if (!session) return;
+
+        const supportIndex = session.supportDeck.findIndex(
+          s => s.character.id === characterId
+        );
+        if (supportIndex === -1) return;
+
+        const support = session.supportDeck[supportIndex];
+        const updatedProgress = { ...support.bondProgress };
+
+        if (eventIndex === 1) {
+          updatedProgress.event1Cleared = true;
+        } else if (eventIndex === 2) {
+          updatedProgress.event2Cleared = true;
+        } else if (eventIndex === 3) {
+          updatedProgress.event3Cleared = true;
+          // 専用カード獲得
+          if (support.bondEvents?.specialCard) {
+            get().addCard(support.bondEvents.specialCard);
+          }
+        }
+
+        const updatedSupportDeck = session.supportDeck.map((s, i) =>
+          i === supportIndex
+            ? { ...s, bondProgress: updatedProgress }
+            : s
+        );
+
+        set({
+          currentSession: {
+            ...session,
+            supportDeck: updatedSupportDeck,
+            currentEvent: null,
+            completedEvents: [...session.completedEvents, `${characterId}_bond_${eventIndex}`],
+          },
+        });
+      },
+
+      getSupportByCharacterId: (characterId) => {
+        const session = get().currentSession;
+        if (!session) return undefined;
+        return session.supportDeck.find(s => s.character.id === characterId);
+      },
+
+      getAvailableBondLessons: () => {
+        const session = get().currentSession;
+        if (!session) return [];
+
+        return session.supportDeck
+          .filter(support => {
+            const threshold = support.bonus.friendshipThreshold || BOND_THRESHOLDS.FRIENDSHIP;
+            return support.bondLevel >= threshold &&
+                   session.trainingParticipants.includes(support.character.id);
+          })
+          .map(support => ({
+            supportId: support.character.id,
+            style: support.bonus.specialtyStyle,
+          }));
+      },
+
+      // === カードゲージシステム ===
+      addCardGauge: (amount) => {
+        const session = get().currentSession;
+        if (!session) return;
+
+        set({
+          currentSession: {
+            ...session,
+            cardGauge: {
+              ...session.cardGauge,
+              current: clamp(session.cardGauge.current + amount, 0, session.cardGauge.max),
+            },
+          },
+        });
+      },
+
+      checkCardGaugeFull: () => {
+        const session = get().currentSession;
+        if (!session) return false;
+        return session.cardGauge.current >= session.cardGauge.max;
+      },
+
+      claimCardFromGauge: (cardIndex) => {
+        const session = get().currentSession;
+        if (!session || session.cardGauge.current < session.cardGauge.max) return null;
+        if (cardIndex < 0 || cardIndex >= session.cardGauge.pendingCards.length) return null;
+
+        const selectedCard = session.cardGauge.pendingCards[cardIndex];
+
+        set({
+          currentSession: {
+            ...session,
+            cardGauge: {
+              current: 0,
+              max: session.cardGauge.max,
+              pendingCards: [],
+            },
+            character: {
+              ...session.character,
+              cards: [...session.character.cards, selectedCard],
+            },
+          },
+        });
+
+        return selectedCard;
+      },
+
+      addPendingCard: (card) => {
+        const session = get().currentSession;
+        if (!session) return;
+
+        set({
+          currentSession: {
+            ...session,
+            cardGauge: {
+              ...session.cardGauge,
+              pendingCards: [...session.cardGauge.pendingCards, card],
+            },
+          },
+        });
+      },
+
+      // === イベントシステム ===
+      setCurrentEvent: (event) => {
+        const session = get().currentSession;
+        if (!session) return;
+
+        set({
+          currentSession: {
+            ...session,
+            currentEvent: event,
+          },
+        });
+      },
+
+      processEventChoice: (choice) => {
+        const session = get().currentSession;
+        if (!session) return;
+
+        let updatedStats = { ...session.character.stats };
+        let updatedCondition = { ...session.character.condition };
+        let updatedGold = session.gold;
+        let updatedFame = session.fame;
+        let updatedFlags = { ...session.scenario.flags };
+        let updatedGaugeCurrent = session.cardGauge.current;
+        const newCards: Card[] = [];
+
+        choice.effects.forEach((effect) => {
+          switch (effect.type) {
+            case 'stats':
+              if (effect.target && effect.target in updatedStats) {
+                updatedStats[effect.target as Style] += effect.value;
+              }
+              break;
+            case 'condition':
+              if (effect.target && effect.target in updatedCondition) {
+                const key = effect.target as keyof CharacterCondition;
+                updatedCondition[key] = clamp(updatedCondition[key] + effect.value, 0, 100);
+              }
+              break;
+            case 'gold':
+              updatedGold += effect.value;
+              break;
+            case 'fame':
+              updatedFame += effect.value;
+              break;
+            case 'card_gauge':
+              updatedGaugeCurrent = clamp(updatedGaugeCurrent + effect.value, 0, session.cardGauge.max);
+              break;
+            case 'flag':
+              if (effect.flagName) {
+                updatedFlags[effect.flagName] = effect.value > 0;
+              }
+              break;
+            case 'bond':
+              if (effect.characterId) {
+                get().addBond(effect.characterId, effect.value);
+              }
+              break;
+          }
+        });
+
+        set({
+          currentSession: {
+            ...session,
+            character: {
+              ...session.character,
+              stats: updatedStats,
+              condition: updatedCondition,
+              rank: calculateRank(updatedStats),
+              cards: [...session.character.cards, ...newCards],
+            },
+            gold: updatedGold,
+            fame: updatedFame,
+            cardGauge: {
+              ...session.cardGauge,
+              current: updatedGaugeCurrent,
+            },
+            scenario: {
+              ...session.scenario,
+              flags: updatedFlags,
+            },
+            currentEvent: null,
+          },
+        });
+      },
+
+      setScenarioFlag: (flagName, value) => {
+        const session = get().currentSession;
+        if (!session) return;
+
+        set({
+          currentSession: {
+            ...session,
+            scenario: {
+              ...session.scenario,
+              flags: {
+                ...session.scenario.flags,
+                [flagName]: value,
               },
             },
           },
@@ -612,6 +1095,7 @@ export const useGameStore = create<GameStore>()(
             selectedCards: [],
             fullRecoveryUsed: false,
           },
+          voltage: 0,
           voltageMax: 10,
           voltageClaimed: false,
         };
@@ -782,6 +1266,7 @@ export const useGameStore = create<GameStore>()(
             gold: battle?.playerState.stars || 0 > (battle?.opponentState.stars || 0) ? 500 : 100,
             fame: battle?.playerState.stars || 0 > (battle?.opponentState.stars || 0) ? 50 : 10,
             cards: [],
+            cardGauge: battle?.playerState.stars || 0 > (battle?.opponentState.stars || 0) ? 20 : 5,
           },
         };
 
@@ -791,6 +1276,14 @@ export const useGameStore = create<GameStore>()(
               ...session,
               gold: session.gold + result.rewards.gold,
               fame: session.fame + result.rewards.fame,
+              cardGauge: {
+                ...session.cardGauge,
+                current: clamp(
+                  session.cardGauge.current + result.rewards.cardGauge,
+                  0,
+                  session.cardGauge.max
+                ),
+              },
             },
             currentBattle: null,
           });

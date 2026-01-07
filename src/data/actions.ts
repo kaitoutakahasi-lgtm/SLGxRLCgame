@@ -339,3 +339,62 @@ export const getAvailableBusinessActions = (fame: number): BusinessAction[] => {
 export const getAuditionByWeek = (week: number): Audition | undefined => {
   return AUDITIONS.find((a) => a.week === week);
 };
+
+// ===========================
+// キズナ練習データ
+// ===========================
+
+import { BondLessonAction, Style, SupportCharacter, BOND_THRESHOLDS } from '../types';
+
+/** キズナ練習のベース効果を生成 */
+export const createBondLessonAction = (
+  support: SupportCharacter
+): BondLessonAction => {
+  const style = support.bonus.specialtyStyle;
+  const characterName = support.character.name;
+
+  return {
+    type: 'bond_lesson',
+    id: `bond_lesson_${support.character.id}`,
+    name: `${characterName}とキズナ練習`,
+    supportCharacterId: support.character.id,
+    targetStyle: style,
+    baseEffect: { min: 35, max: 55 },
+    bondBonus: 8,
+    friendshipMultiplier: 1.5,
+    baseFatigue: 12,
+    unlockBondLevel: support.bonus.friendshipThreshold || BOND_THRESHOLDS.FRIENDSHIP,
+  };
+};
+
+/** 利用可能なキズナ練習を取得 */
+export const getAvailableBondLessons = (
+  supportDeck: SupportCharacter[],
+  trainingParticipants: string[]
+): BondLessonAction[] => {
+  return supportDeck
+    .filter((support) => {
+      const threshold = support.bonus.friendshipThreshold || BOND_THRESHOLDS.FRIENDSHIP;
+      return (
+        support.bondLevel >= threshold &&
+        trainingParticipants.includes(support.character.id)
+      );
+    })
+    .map(createBondLessonAction);
+};
+
+// ===========================
+// スタイル名の日本語マッピング
+// ===========================
+
+export const STYLE_NAMES: Record<Style, string> = {
+  cool: 'クール',
+  elegant: 'エレガント',
+  cute: 'キュート',
+  clever: 'クレバー',
+  passion: 'パッション',
+};
+
+export const getStyleName = (style: Style): string => {
+  return STYLE_NAMES[style];
+};

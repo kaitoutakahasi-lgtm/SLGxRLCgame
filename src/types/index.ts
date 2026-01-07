@@ -1,5 +1,5 @@
 // ===========================
-// アイドル育成デッキ構築ゲーム - 型定義
+// アイドル育成デッキ構築ゲーム - 型定義 v2
 // ===========================
 
 // ===========================
@@ -37,39 +37,20 @@ export type CharacterType = 'training' | 'support' | 'fixed' | 'trained' | 'edit
 // ===========================
 
 export interface SpeechStyle {
-  firstPerson: string;      // 一人称
-  secondPerson: string;     // 二人称
-  template: SpeechTemplate; // 語尾テンプレート
-  customEnding?: string;    // カスタム語尾
+  firstPerson: string;
+  secondPerson: string;
+  template: SpeechTemplate;
+  customEnding?: string;
 }
 
 export type SpeechTemplate =
-  // 女性向け
-  | 'female_polite'      // 標準敬語
-  | 'female_casual'      // 標準タメ
-  | 'female_ojou'        // お嬢様
-  | 'female_gyaru'       // ギャル
-  | 'female_quiet'       // 無口
-  | 'female_energetic'   // 元気
-  | 'female_tsundere'    // ツンデレ
-  | 'female_dialect_a'   // 方言A
-  // 男性向け
-  | 'male_polite'        // 標準敬語
-  | 'male_casual'        // 標準タメ
-  | 'male_hotblooded'    // 熱血
-  | 'male_cool'          // クール
-  | 'male_prince'        // 王子様
-  | 'male_rough'         // オラオラ
-  | 'male_quiet'         // 無口
-  | 'male_dialect_b'     // 方言B
-  // 共通
-  | 'neutral_polite'     // 中性敬語
-  | 'neutral_casual'     // 中性タメ
-  | 'robot'              // ロボット
-  | 'custom';            // カスタム
+  | 'female_polite' | 'female_casual' | 'female_ojou' | 'female_gyaru'
+  | 'female_quiet' | 'female_energetic' | 'female_tsundere' | 'female_dialect_a'
+  | 'male_polite' | 'male_casual' | 'male_hotblooded' | 'male_cool'
+  | 'male_prince' | 'male_rough' | 'male_quiet' | 'male_dialect_b'
+  | 'neutral_polite' | 'neutral_casual' | 'robot' | 'custom';
 
 export const SPEECH_TEMPLATE_ENDINGS: Record<SpeechTemplate, { positive: string; negative: string; question: string }> = {
-  // 女性向け
   female_polite: { positive: 'です', negative: 'ません', question: 'ですか' },
   female_casual: { positive: 'だよ', negative: 'ないよ', question: 'かな' },
   female_ojou: { positive: 'ですわ', negative: 'ませんわ', question: 'ですの' },
@@ -78,7 +59,6 @@ export const SPEECH_TEMPLATE_ENDINGS: Record<SpeechTemplate, { positive: string;
   female_energetic: { positive: 'だよっ！', negative: 'ないよっ！', question: 'かなっ！' },
   female_tsundere: { positive: 'んだから', negative: 'ないんだから', question: 'なのよ' },
   female_dialect_a: { positive: 'ばい', negative: 'なかばい', question: 'ね' },
-  // 男性向け
   male_polite: { positive: 'です', negative: 'ません', question: 'ですか' },
   male_casual: { positive: 'だ', negative: 'ない', question: 'か' },
   male_hotblooded: { positive: 'ぜ！', negative: 'ないぜ！', question: 'か！' },
@@ -87,7 +67,6 @@ export const SPEECH_TEMPLATE_ENDINGS: Record<SpeechTemplate, { positive: string;
   male_rough: { positive: 'んだよ', negative: 'ねぇよ', question: 'だろ' },
   male_quiet: { positive: '…', negative: '…ない', question: '…?' },
   male_dialect_b: { positive: 'のじゃ', negative: 'ないのじゃ', question: 'かのう' },
-  // 共通
   neutral_polite: { positive: 'です', negative: 'ません', question: 'ですか' },
   neutral_casual: { positive: 'だよ', negative: 'ないよ', question: 'かな' },
   robot: { positive: 'デス', negative: 'マセン', question: 'デスカ' },
@@ -99,22 +78,14 @@ export const SPEECH_TEMPLATE_ENDINGS: Record<SpeechTemplate, { positive: string;
 // ===========================
 
 export type UniqueSkillType =
-  | 'growth_style_a'    // 特定スタイル成長率UP
-  | 'growth_style_b'    // 全スタイル成長率微UP
-  | 'condition_a'       // 疲労軽減
-  | 'condition_b'       // 体調維持
-  | 'event_a'           // 特定イベント発生率UP
-  | 'event_b'           // イベント報酬UP
-  | 'live_a'            // 特定条件でアピールUP
-  | 'live_b'            // リソース効率UP
-  | 'money'             // 収入UP
-  | 'bond';             // 絆上昇率UP
+  | 'growth_style_a' | 'growth_style_b' | 'condition_a' | 'condition_b'
+  | 'event_a' | 'event_b' | 'live_a' | 'live_b' | 'money' | 'bond';
 
 export interface UniqueSkill {
   type: UniqueSkillType;
   name: string;
   description: string;
-  targetStyle?: Style; // growth_style_aなど特定スタイル対象の場合
+  targetStyle?: Style;
 }
 
 // ===========================
@@ -130,10 +101,10 @@ export interface CharacterStats {
 }
 
 export interface CharacterCondition {
-  health: number;    // 体調 0-100
-  fatigue: number;   // 疲労 0-100
-  motivation: number; // やる気 0-100
-  mental: number;    // メンタル 0-100
+  health: number;
+  fatigue: number;
+  motivation: number;
+  mental: number;
 }
 
 export interface CharacterAppearance {
@@ -157,23 +128,20 @@ export interface BaseCharacter {
   uniqueSkill: UniqueSkill;
 }
 
-/** エディットキャラ（作成したオリジナルキャラ） */
 export interface EditCharacter extends BaseCharacter {
   type: 'edit';
   createdAt: number;
 }
 
-/** 育成中キャラクター */
 export interface TrainingCharacter extends BaseCharacter {
   type: 'training';
   stats: CharacterStats;
   condition: CharacterCondition;
   rank: Rank;
   cards: Card[];
-  actionSpeed: number; // 行動順 1-10
+  actionSpeed: number;
 }
 
-/** 育成済みキャラクター */
 export interface TrainedCharacter extends BaseCharacter {
   type: 'trained';
   finalStats: CharacterStats;
@@ -183,33 +151,125 @@ export interface TrainedCharacter extends BaseCharacter {
   bestStyle: Style;
 }
 
-/** 固有キャラ（ゲーム側が用意） */
 export interface FixedCharacter extends BaseCharacter {
   type: 'fixed';
   defaultStats: CharacterStats;
   storyEvents: string[];
   specialCards: Card[];
+  bondEvents: BondEventSet;
 }
 
 export type Character = EditCharacter | TrainingCharacter | TrainedCharacter | FixedCharacter;
 
 // ===========================
-// サポートキャラクター
+// キズナ（絆）システム
 // ===========================
 
+/** キズナイベントの種類 */
+export type BondEventType = 'bond_up' | 'stat_up' | 'card_gauge_up';
+
+/** キズナイベント */
+export interface BondEvent {
+  id: string;
+  type: BondEventType;
+  name: string;
+  description: string;
+  dialogue: string[];
+  choices: EventChoice[];
+  rewards: {
+    bondUp?: number;
+    statUp?: Partial<CharacterStats>;
+    cardGaugeUp?: number;
+  };
+}
+
+/** サポートキャラのキズナイベントセット */
+export interface BondEventSet {
+  event1: BondEvent;  // キズナアップイベント（絆20で発生）
+  event2: BondEvent;  // ステータスアップイベント（絆50で発生）
+  event3: BondEvent;  // カードゲージイベント（絆80で発生）→完了で専用カード
+  specialCard: Card;  // 3つ目クリアで獲得
+}
+
+/** サポートキャラの絆進行状態 */
+export interface SupportBondProgress {
+  event1Cleared: boolean;
+  event2Cleared: boolean;
+  event3Cleared: boolean;
+}
+
+// ===========================
+// サポートキャラクター（拡張版）
+// ===========================
+
+/** サポートボーナステーブル（パワプロ・ウマ娘風） */
 export interface SupportBonus {
-  lessonBonus: Partial<Record<Style, number>>; // スタイル別レッスン効果+%
-  eventBonus: number;     // イベント発生率・効果+%
-  cardBonus: number;      // カード獲得率+%
-  initialStats: Partial<CharacterStats>; // 初期ステータス+
+  // 基本ボーナス
+  lessonBonus: Partial<Record<Style, number>>;
+  initialStats: Partial<CharacterStats>;
+
+  // 得意練習系
+  specialtyStyle: Style;          // 得意スタイル
+  specialtyRate: number;          // 得意練習発生率 (0-100)
+  trainingEffectUp: number;       // トレーニング効果UP %
+
+  // キズナ練習系
+  friendshipBonus: number;        // 友情トレーニング効果UP %
+  friendshipThreshold: number;    // 友情トレーニング解禁絆レベル
+
+  // やる気・コンディション系
+  motivationEffectUp: number;     // やる気効果UP %
+  fatigueReduction: number;       // 疲労軽減 %
+  conditionUp: number;            // 体調回復量UP
+
+  // イベント系
+  eventRate: number;              // イベント発生率UP %
+  eventEffectUp: number;          // イベント効果UP %
+
+  // カード・スキル系
+  cardGaugeBonus: number;         // カード獲得ゲージボーナス
+  hintRate: number;               // スキルヒント発生率 %
+  hintEffectUp: number;           // ヒント効果UP %
+
+  // 資金・知名度系
+  goldBonus: number;              // 収入UP %
+  fameBonus: number;              // 知名度UP %
+
+  // コンテスト系
+  contestBonus: number;           // コンテストボーナス %
+
+  // 初期系
+  initialBond: number;            // 初期絆レベル
+
+  // 設備系
   facilityBonus: { facilityId: string; effectBonus?: number; costDiscount?: number }[];
 }
 
+/** サポートキャラクター（拡張版） */
 export interface SupportCharacter {
   character: TrainedCharacter | FixedCharacter | EditCharacter;
-  bondLevel: number; // 絆レベル 0-100
+  bondLevel: number;
   bonus: SupportBonus;
-  bondSkillCard?: Card; // 絆スキルで獲得できるカード
+  bondProgress: SupportBondProgress;
+  bondEvents?: BondEventSet;
+  isInTraining: boolean;  // 今回の練習に参加しているか
+}
+
+// ===========================
+// カード獲得ゲージシステム
+// ===========================
+
+export interface CardAcquisitionGauge {
+  current: number;      // 現在値 0-100
+  max: number;          // 最大値（通常100）
+  pendingCards: Card[]; // 獲得予定のカード候補
+}
+
+/** スキルヒント */
+export interface SkillHint {
+  supportCharacterId: string;
+  card: Card;
+  hintLevel: number;  // 1-5、高いほど獲得しやすい
 }
 
 // ===========================
@@ -235,10 +295,12 @@ export interface Card {
   description: string;
   category: CardCategory;
   style: Style;
-  cost: number; // 1-3
+  cost: number;
   requiredRank: Rank;
   effects: CardEffect[];
   flavorText?: string;
+  isSpecial?: boolean;  // 専用カードかどうか
+  sourceCharacterId?: string;  // どのサポートキャラから獲得したか
 }
 
 // ===========================
@@ -265,8 +327,9 @@ export interface FacilityEffect {
 }
 
 export interface UnlockCondition {
-  type: 'facility_total' | 'rank' | 'fame';
+  type: 'facility_total' | 'rank' | 'fame' | 'bond' | 'scenario';
   value: number;
+  scenarioFlag?: string;
 }
 
 export interface OwnedFacility {
@@ -275,10 +338,10 @@ export interface OwnedFacility {
 }
 
 // ===========================
-// 週間行動システム
+// 週間行動システム（拡張版）
 // ===========================
 
-export type ActionType = 'lesson' | 'rest' | 'business' | 'special';
+export type ActionType = 'lesson' | 'rest' | 'business' | 'bond_lesson' | 'special';
 
 export interface LessonAction {
   type: 'lesson';
@@ -288,6 +351,20 @@ export interface LessonAction {
   baseEffect: { min: number; max: number };
   baseFatigue: number;
   unlockCondition?: UnlockCondition;
+}
+
+/** キズナ練習 */
+export interface BondLessonAction {
+  type: 'bond_lesson';
+  id: string;
+  name: string;
+  supportCharacterId: string;
+  targetStyle: Style;
+  baseEffect: { min: number; max: number };
+  bondBonus: number;           // 絆上昇量
+  friendshipMultiplier: number; // 効果倍率（通常練習より高い）
+  baseFatigue: number;
+  unlockBondLevel: number;     // 解禁に必要な絆レベル
 }
 
 export interface RestAction {
@@ -309,55 +386,103 @@ export interface BusinessAction {
   unlockCondition?: UnlockCondition;
 }
 
-export type WeeklyAction = LessonAction | RestAction | BusinessAction;
+export type WeeklyAction = LessonAction | BondLessonAction | RestAction | BusinessAction;
 
 // ===========================
-// オーディション（定期イベント）
-// ===========================
-
-export interface Audition {
-  id: string;
-  name: string;
-  week: number; // 発生週
-  difficulty: 'beginner' | 'intermediate' | 'advanced' | 'master';
-  goldReward: number;
-  fameReward: number;
-  rivalLevel: number; // AIライバルの強さ
-}
-
-// ===========================
-// イベントシステム
+// イベントシステム（パワプロ風）
 // ===========================
 
 export interface EventChoice {
+  id: string;
   text: string;
   effects: EventEffect[];
+  nextEventId?: string;      // 分岐先のイベントID
+  condition?: EventCondition; // 選択肢の表示条件
+}
+
+export interface EventCondition {
+  type: 'stat' | 'bond' | 'flag' | 'random';
+  statRequirement?: { style: Style; minValue: number };
+  bondRequirement?: { characterId: string; minLevel: number };
+  flagRequirement?: string;
+  probability?: number;
 }
 
 export interface EventEffect {
-  type: 'stats' | 'condition' | 'gold' | 'card' | 'bond' | 'fame';
-  target?: Style | keyof CharacterCondition;
+  type: 'stats' | 'condition' | 'gold' | 'card' | 'bond' | 'fame' | 'card_gauge' | 'flag' | 'scenario';
+  target?: Style | keyof CharacterCondition | string;
   value: number;
   cardId?: string;
+  characterId?: string;
+  flagName?: string;
+  scenarioId?: string;
 }
 
 export interface GameEvent {
   id: string;
   name: string;
   description: string;
-  dialogue: string[]; // 変数含むテンプレート
+  eventType: 'random' | 'bond' | 'story' | 'scenario' | 'weekly';
+  dialogue: string[];
   triggerCondition: EventTrigger;
   choices: EventChoice[];
+  isRepeatable: boolean;
+  priority: number;  // 高いほど優先的に発生
 }
 
 export interface EventTrigger {
-  type: 'week' | 'stat' | 'bond' | 'facility' | 'random';
+  type: 'week' | 'stat' | 'bond' | 'facility' | 'random' | 'flag' | 'scenario';
   week?: number;
   stat?: { style: Style; minValue: number };
   bondLevel?: number;
+  characterId?: string;
   facilityId?: string;
   facilityLevel?: number;
   probability?: number;
+  requiredFlag?: string;
+  scenarioPhase?: number;
+}
+
+// ===========================
+// シナリオ分岐システム
+// ===========================
+
+export interface ScenarioBranch {
+  id: string;
+  name: string;
+  description: string;
+  unlockCondition: {
+    type: 'choice' | 'stat' | 'bond' | 'event';
+    eventId?: string;
+    choiceId?: string;
+    statRequirement?: { style: Style; minValue: number };
+    bondRequirement?: { characterId: string; minLevel: number };
+  };
+  events: string[];      // このルートで発生するイベントID
+  bonuses: Partial<CharacterStats>;
+  specialCards: string[];
+  endingType: 'normal' | 'good' | 'true' | 'bad';
+}
+
+export interface ScenarioProgress {
+  currentPhase: number;
+  activeScenarioId: string | null;
+  completedBranches: string[];
+  flags: Record<string, boolean>;
+}
+
+// ===========================
+// オーディション
+// ===========================
+
+export interface Audition {
+  id: string;
+  name: string;
+  week: number;
+  difficulty: 'beginner' | 'intermediate' | 'advanced' | 'master';
+  goldReward: number;
+  fameReward: number;
+  rivalLevel: number;
 }
 
 // ===========================
@@ -370,8 +495,9 @@ export interface BattleState {
   trend: Style;
   playerState: PlayerBattleState;
   opponentState: PlayerBattleState;
+  voltage: number;
   voltageMax: number;
-  voltageClaimed: boolean; // MAX到達ボーナス獲得済みか
+  voltageClaimed: boolean;
 }
 
 export interface PlayerBattleState {
@@ -394,11 +520,12 @@ export interface BattleResult {
     gold: number;
     fame: number;
     cards: Card[];
+    cardGauge: number;
   };
 }
 
 // ===========================
-// 育成セッション
+// 育成セッション（拡張版）
 // ===========================
 
 export interface TrainingSession {
@@ -411,6 +538,21 @@ export interface TrainingSession {
   facilities: OwnedFacility[];
   completedEvents: string[];
   auditionResults: { auditionId: string; result: BattleResult }[];
+
+  // カード獲得ゲージ
+  cardGauge: CardAcquisitionGauge;
+
+  // スキルヒント
+  skillHints: SkillHint[];
+
+  // シナリオ進行
+  scenario: ScenarioProgress;
+
+  // 現在発生中のイベント
+  currentEvent: GameEvent | null;
+
+  // 練習参加サポート（今週の練習にいるサポート）
+  trainingParticipants: string[];
 }
 
 // ===========================
@@ -418,21 +560,12 @@ export interface TrainingSession {
 // ===========================
 
 export interface GameState {
-  // プレイヤーデータ
   editCharacters: EditCharacter[];
   trainedCharacters: TrainedCharacter[];
-
-  // 現在の育成セッション（育成中のみ）
   currentSession: TrainingSession | null;
-
-  // ライブバトル中の状態
   currentBattle: BattleState | null;
-
-  // ゲーム進行フラグ
   unlockedFixedCharacters: string[];
   totalTrainingCount: number;
-
-  // 設定
   settings: GameSettings;
 }
 
@@ -441,28 +574,30 @@ export interface GameSettings {
   seVolume: number;
   textSpeed: 'slow' | 'normal' | 'fast';
   autoSave: boolean;
+  effectLevel: 'low' | 'medium' | 'high';
 }
 
 // ===========================
-// ランクシステム
+// 定数
 // ===========================
 
 export const RANK_THRESHOLDS: Record<Rank, number> = {
-  E: 0,
-  D: 50,
-  C: 150,
-  B: 350,
-  A: 700,
-  S: 1200,
-  SS: 1900,
-  SSS: 2800,
+  E: 0, D: 50, C: 150, B: 350, A: 700, S: 1200, SS: 1900, SSS: 2800,
 };
 
 export const RANK_ORDER: Rank[] = ['E', 'D', 'C', 'B', 'A', 'S', 'SS', 'SSS'];
 
-// ===========================
-// 性格パッシブ効果
-// ===========================
+export const BOND_THRESHOLDS = {
+  EVENT_1: 20,   // キズナイベント1解禁
+  EVENT_2: 50,   // キズナイベント2解禁
+  EVENT_3: 80,   // キズナイベント3解禁
+  FRIENDSHIP: 40, // 友情トレーニング解禁（デフォルト）
+};
+
+export const CARD_GAUGE_MAX = 100;
+export const CARD_GAUGE_PER_LESSON = 5;
+export const CARD_GAUGE_PER_BOND_LESSON = 10;
+export const CARD_GAUGE_PER_HINT = 15;
 
 export const PERSONALITY_PASSIVES: Record<PersonalityType, { description: string; condition: string }> = {
   hotblooded: { description: 'アピール+1', condition: 'スタミナ4以上' },

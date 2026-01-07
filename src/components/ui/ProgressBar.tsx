@@ -6,7 +6,7 @@ interface ProgressBarProps {
   max: number;
   label?: string;
   showValue?: boolean;
-  color?: 'blue' | 'green' | 'red' | 'yellow' | 'purple';
+  color?: 'blue' | 'green' | 'red' | 'yellow' | 'purple' | 'cyan' | 'pink';
   size?: 'small' | 'medium' | 'large';
 }
 

@@ -374,3 +374,28 @@ export const getStarterDeck = (): Card[] => {
     BASIC_CARDS.find((c) => c.id === 'passion_basic_1')!,
   ];
 };
+
+import { Rank, RANK_ORDER } from '../types';
+
+/** ランクに基づいて獲得可能なカードをフィルタ */
+export const getAvailableCardsForRank = (rank: Rank): Card[] => {
+  const rankIndex = RANK_ORDER.indexOf(rank);
+  return BASIC_CARDS.filter((card) => {
+    const cardRankIndex = RANK_ORDER.indexOf(card.requiredRank);
+    return cardRankIndex <= rankIndex;
+  });
+};
+
+/** カードゲージ満タン時の選択肢を生成 */
+export const generateCardChoices = (rank: Rank, count: number = 3): Card[] => {
+  const available = getAvailableCardsForRank(rank);
+  const shuffled = [...available].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+};
+
+/** スタイル別にランダムなカードを取得 */
+export const getRandomCardByStyle = (style: string, rank: Rank): Card | undefined => {
+  const available = getAvailableCardsForRank(rank).filter((c) => c.style === style);
+  if (available.length === 0) return undefined;
+  return available[Math.floor(Math.random() * available.length)];
+};

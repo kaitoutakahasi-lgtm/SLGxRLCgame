@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button, Card, ProgressBar, StatDisplay, Modal } from '../ui';
+import { EventDialog } from '../event';
 import { useGameStore } from '../../store';
 import {
   LESSON_ACTIONS,
@@ -8,9 +9,21 @@ import {
   getAvailableLessons,
   getAvailableBusinessActions,
   getAuditionByWeek,
+  getAvailableBondLessons,
+  getStyleName,
+  generateCardChoices,
 } from '../../data';
-import { FACILITIES, calculateFacilityUpgradeCost, getFacilityById } from '../../data/facilities';
-import { Style, LessonAction, RestAction, BusinessAction } from '../../types';
+import { FACILITIES, calculateFacilityUpgradeCost } from '../../data/facilities';
+import {
+  Style,
+  LessonAction,
+  RestAction,
+  BusinessAction,
+  BondLessonAction,
+  EventChoice,
+  BOND_THRESHOLDS,
+  Card as CardType,
+} from '../../types';
 import './TrainingScreen.css';
 
 interface TrainingScreenProps {
@@ -18,7 +31,7 @@ interface TrainingScreenProps {
   onComplete: () => void;
 }
 
-type ActionTab = 'lesson' | 'rest' | 'business' | 'facility';
+type ActionTab = 'lesson' | 'bond' | 'rest' | 'business' | 'facility';
 
 export const TrainingScreen: React.FC<TrainingScreenProps> = ({
   onBattle,
@@ -26,6 +39,7 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
 }) => {
   const session = useGameStore((state) => state.currentSession);
   const performLesson = useGameStore((state) => state.performLesson);
+  const performBondLesson = useGameStore((state) => state.performBondLesson);
   const performRest = useGameStore((state) => state.performRest);
   const performBusiness = useGameStore((state) => state.performBusiness);
   const advanceWeek = useGameStore((state) => state.advanceWeek);
@@ -33,16 +47,34 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
   const upgradeFacility = useGameStore((state) => state.upgradeFacility);
   const getTotalFacilityLevel = useGameStore((state) => state.getTotalFacilityLevel);
   const endTraining = useGameStore((state) => state.endTraining);
+  const triggerBondEvent = useGameStore((state) => state.triggerBondEvent);
+  const completeBondEvent = useGameStore((state) => state.completeBondEvent);
+  const processEventChoice = useGameStore((state) => state.processEventChoice);
+  const setCurrentEvent = useGameStore((state) => state.setCurrentEvent);
+  const addCard = useGameStore((state) => state.addCard);
 
   const [activeTab, setActiveTab] = useState<ActionTab>('lesson');
-  const [showFacilityModal, setShowFacilityModal] = useState(false);
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
+  const [showCardGaugeModal, setShowCardGaugeModal] = useState(false);
+  const [cardChoices, setCardChoices] = useState<CardType[]>([]);
 
   if (!session) {
     return <div>育成セッションがありません</div>;
   }
 
-  const { character, currentWeek, maxWeeks, gold, fame, facilities } = session;
+  const {
+    character,
+    currentWeek,
+    maxWeeks,
+    gold,
+    fame,
+    facilities,
+    supportDeck,
+    cardGauge,
+    trainingParticipants,
+    currentEvent,
+  } = session;
+
   const totalFacilityLevel = getTotalFacilityLevel();
 
   // オーディションチェック
@@ -51,13 +83,66 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
   // 利用可能なアクション
   const availableLessons = getAvailableLessons(totalFacilityLevel);
   const availableBusinesses = getAvailableBusinessActions(fame);
+  const availableBondLessons = getAvailableBondLessons(supportDeck, trainingParticipants);
+
+  // カードゲージ満タンチェック
+  useEffect(() => {
+    if (cardGauge.current >= cardGauge.max && !showCardGaugeModal) {
+      const choices = generateCardChoices(character.rank, 3);
+      setCardChoices(choices);
+      setShowCardGaugeModal(true);
+    }
+  }, [cardGauge.current, cardGauge.max]);
+
+  // キズナイベントトリガーチェック
+  useEffect(() => {
+    if (currentEvent) return;
+
+    supportDeck.forEach((support) => {
+      if (!support.bondEvents) return;
+
+      if (support.bondLevel >= BOND_THRESHOLDS.EVENT_3 && !support.bondProgress.event3Cleared) {
+        triggerBondEvent(support.character.id, 3);
+      } else if (support.bondLevel >= BOND_THRESHOLDS.EVENT_2 && !support.bondProgress.event2Cleared) {
+        triggerBondEvent(support.character.id, 2);
+      } else if (support.bondLevel >= BOND_THRESHOLDS.EVENT_1 && !support.bondProgress.event1Cleared) {
+        triggerBondEvent(support.character.id, 1);
+      }
+    });
+  }, [supportDeck]);
 
   const handleLessonAction = (lesson: LessonAction) => {
     const baseEffect = Math.floor(
       Math.random() * (lesson.baseEffect.max - lesson.baseEffect.min + 1) +
         lesson.baseEffect.min
     );
-    performLesson(lesson.targetStyle as Style | 'all', baseEffect, lesson.baseFatigue);
+    // 練習に参加しているサポートを渡す
+    const participatingSupports = supportDeck
+      .filter(s => trainingParticipants.includes(s.character.id))
+      .map(s => s.character.id);
+
+    performLesson(
+      lesson.targetStyle as Style | 'all',
+      baseEffect,
+      lesson.baseFatigue,
+      participatingSupports
+    );
+    advanceWeek();
+    setSelectedAction(null);
+  };
+
+  const handleBondLessonAction = (bondLesson: BondLessonAction) => {
+    const baseEffect = Math.floor(
+      Math.random() * (bondLesson.baseEffect.max - bondLesson.baseEffect.min + 1) +
+        bondLesson.baseEffect.min
+    );
+    performBondLesson(
+      bondLesson.supportCharacterId,
+      bondLesson.targetStyle,
+      baseEffect,
+      bondLesson.bondBonus,
+      bondLesson.baseFatigue
+    );
     advanceWeek();
     setSelectedAction(null);
   };
@@ -90,6 +175,36 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
     }
   };
 
+  const handleEventChoice = (choice: EventChoice) => {
+    if (!currentEvent) return;
+
+    // 絆イベントの場合
+    const bondEventMatch = currentEvent.id.match(/^(.+)_bond_(\d)$/);
+    if (bondEventMatch) {
+      const [, characterId, eventIndexStr] = bondEventMatch;
+      const eventIndex = parseInt(eventIndexStr, 10);
+      completeBondEvent(characterId, eventIndex, choice.id);
+    } else {
+      processEventChoice(choice);
+    }
+  };
+
+  const handleCardSelect = (card: CardType) => {
+    addCard(card);
+    setShowCardGaugeModal(false);
+    // カードゲージをリセット（ストア側で処理）
+    useGameStore.setState((state) => ({
+      currentSession: state.currentSession ? {
+        ...state.currentSession,
+        cardGauge: {
+          current: 0,
+          max: state.currentSession.cardGauge.max,
+          pendingCards: [],
+        },
+      } : null,
+    }));
+  };
+
   const handleEndTraining = () => {
     endTraining();
     onComplete();
@@ -103,6 +218,16 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
         <StatDisplay stats={character.stats} rank={character.rank} />
         <Button onClick={handleEndTraining}>結果を保存</Button>
       </div>
+    );
+  }
+
+  // イベント発生中
+  if (currentEvent) {
+    return (
+      <EventDialog
+        event={currentEvent}
+        onChoiceSelect={handleEventChoice}
+      />
     );
   }
 
@@ -123,26 +248,88 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
 
   const renderLessonTab = () => (
     <div className="training-actions__grid">
-      {availableLessons.map((lesson) => (
-        <Card
-          key={lesson.id}
-          onClick={() => setSelectedAction(lesson.id)}
-          selected={selectedAction === lesson.id}
-        >
-          <div className="training-action">
-            <strong>{lesson.name}</strong>
-            <span className="training-action__style">
-              {lesson.targetStyle === 'all' ? '全スタイル' : lesson.targetStyle}
-            </span>
-            <span className="training-action__effect">
-              効果: {lesson.baseEffect.min}〜{lesson.baseEffect.max}
-            </span>
-            <span className="training-action__fatigue">
-              疲労: +{lesson.baseFatigue}
-            </span>
-          </div>
-        </Card>
-      ))}
+      {availableLessons.map((lesson) => {
+        // この練習に参加しているサポートをチェック
+        const participatingSupports = supportDeck.filter(
+          s => trainingParticipants.includes(s.character.id) &&
+               s.bonus.specialtyStyle === lesson.targetStyle
+        );
+
+        return (
+          <Card
+            key={lesson.id}
+            onClick={() => setSelectedAction(lesson.id)}
+            selected={selectedAction === lesson.id}
+          >
+            <div className="training-action">
+              <strong>{lesson.name}</strong>
+              <span className="training-action__style">
+                {lesson.targetStyle === 'all' ? '全スタイル' : getStyleName(lesson.targetStyle as Style)}
+              </span>
+              <span className="training-action__effect">
+                効果: {lesson.baseEffect.min}〜{lesson.baseEffect.max}
+              </span>
+              <span className="training-action__fatigue">
+                疲労: +{lesson.baseFatigue}
+              </span>
+              {participatingSupports.length > 0 && (
+                <div className="training-action__supports">
+                  {participatingSupports.map(s => (
+                    <span key={s.character.id} className="support-icon" title={s.character.name}>
+                      {s.character.name.charAt(0)}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+        );
+      })}
+    </div>
+  );
+
+  const renderBondTab = () => (
+    <div className="training-actions__grid">
+      {availableBondLessons.length === 0 ? (
+        <div className="training-actions__empty">
+          <p>キズナ練習はまだ利用できません</p>
+          <p className="training-actions__hint">
+            サポートキャラの絆レベルを{BOND_THRESHOLDS.FRIENDSHIP}以上にすると解禁されます
+          </p>
+        </div>
+      ) : (
+        availableBondLessons.map((bondLesson) => {
+          const support = supportDeck.find(s => s.character.id === bondLesson.supportCharacterId);
+          if (!support) return null;
+
+          return (
+            <Card
+              key={bondLesson.id}
+              onClick={() => setSelectedAction(bondLesson.id)}
+              selected={selectedAction === bondLesson.id}
+            >
+              <div className="training-action training-action--bond">
+                <div className="training-action__header">
+                  <span className="support-icon large">{support.character.name.charAt(0)}</span>
+                  <strong>{bondLesson.name}</strong>
+                </div>
+                <span className="training-action__style bond">
+                  {getStyleName(bondLesson.targetStyle)} (友情)
+                </span>
+                <span className="training-action__effect">
+                  効果: {bondLesson.baseEffect.min}〜{bondLesson.baseEffect.max} (x{bondLesson.friendshipMultiplier})
+                </span>
+                <span className="training-action__bond-bonus">
+                  絆: +{bondLesson.bondBonus}
+                </span>
+                <span className="training-action__fatigue">
+                  疲労: +{bondLesson.baseFatigue}
+                </span>
+              </div>
+            </Card>
+          );
+        })
+      )}
     </div>
   );
 
@@ -237,6 +424,13 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
   const executeSelectedAction = () => {
     if (!selectedAction) return;
 
+    // キズナ練習
+    const bondLesson = availableBondLessons.find((bl) => bl.id === selectedAction);
+    if (bondLesson) {
+      handleBondLessonAction(bondLesson);
+      return;
+    }
+
     const lesson = LESSON_ACTIONS.find((l) => l.id === selectedAction);
     if (lesson) {
       handleLessonAction(lesson);
@@ -258,6 +452,35 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
 
   return (
     <div className="training-screen">
+      {/* カードゲージ満タンモーダル */}
+      {showCardGaugeModal && (
+        <Modal isOpen={showCardGaugeModal} onClose={() => {}}>
+          <div className="card-gauge-modal">
+            <h2>カード獲得！</h2>
+            <p>ゲージが満タンになりました。1枚選んでください。</p>
+            <div className="card-gauge-modal__choices">
+              {cardChoices.map((card, index) => (
+                <div
+                  key={index}
+                  className="card-choice"
+                  onClick={() => handleCardSelect(card)}
+                >
+                  <div className={`card-choice__style ${card.style}`}>
+                    {getStyleName(card.style)}
+                  </div>
+                  <h3>{card.name}</h3>
+                  <p>{card.description}</p>
+                  <div className="card-choice__stats">
+                    <span>コスト: {card.cost}</span>
+                    <span>必要ランク: {card.requiredRank}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Modal>
+      )}
+
       <div className="training-screen__header">
         <div className="training-screen__week">
           第{currentWeek}週 / {maxWeeks}週
@@ -269,37 +492,89 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
       </div>
 
       <div className="training-screen__main">
-        <div className="training-screen__status">
-          <Card title={character.name}>
-            <StatDisplay stats={character.stats} rank={character.rank} />
-          </Card>
+        <div className="training-screen__left">
+          {/* ステータス */}
+          <div className="training-screen__status">
+            <Card title={character.name}>
+              <StatDisplay stats={character.stats} rank={character.rank} />
+            </Card>
 
-          <Card title="コンディション">
-            <div className="training-condition">
+            <Card title="コンディション">
+              <div className="training-condition">
+                <ProgressBar
+                  label="体調"
+                  value={character.condition.health}
+                  max={100}
+                  color="green"
+                />
+                <ProgressBar
+                  label="疲労"
+                  value={character.condition.fatigue}
+                  max={100}
+                  color="red"
+                />
+                <ProgressBar
+                  label="やる気"
+                  value={character.condition.motivation}
+                  max={100}
+                  color="yellow"
+                />
+                <ProgressBar
+                  label="メンタル"
+                  value={character.condition.mental}
+                  max={100}
+                  color="purple"
+                />
+              </div>
+            </Card>
+
+            {/* カードゲージ */}
+            <Card title="カードゲージ">
               <ProgressBar
-                label="体調"
-                value={character.condition.health}
-                max={100}
-                color="green"
+                label="ゲージ"
+                value={cardGauge.current}
+                max={cardGauge.max}
+                color="cyan"
               />
-              <ProgressBar
-                label="疲労"
-                value={character.condition.fatigue}
-                max={100}
-                color="red"
-              />
-              <ProgressBar
-                label="やる気"
-                value={character.condition.motivation}
-                max={100}
-                color="yellow"
-              />
-              <ProgressBar
-                label="メンタル"
-                value={character.condition.mental}
-                max={100}
-                color="purple"
-              />
+              <p className="card-gauge-hint">
+                {cardGauge.current >= cardGauge.max
+                  ? '満タン！カードを獲得できます'
+                  : `あと${cardGauge.max - cardGauge.current}で獲得`}
+              </p>
+            </Card>
+          </div>
+
+          {/* サポートデッキ */}
+          <Card title="サポート">
+            <div className="support-deck-panel">
+              {supportDeck.map((support) => {
+                const isInTraining = trainingParticipants.includes(support.character.id);
+                const canBondLesson = support.bondLevel >= (support.bonus.friendshipThreshold || BOND_THRESHOLDS.FRIENDSHIP);
+
+                return (
+                  <div
+                    key={support.character.id}
+                    className={`support-card ${isInTraining ? 'active' : ''} ${canBondLesson ? 'friendship' : ''}`}
+                  >
+                    <div className="support-card__icon">
+                      {support.character.name.charAt(0)}
+                    </div>
+                    <div className="support-card__info">
+                      <span className="support-card__name">{support.character.name}</span>
+                      <ProgressBar
+                        value={support.bondLevel}
+                        max={100}
+                        color="pink"
+                        showValue={false}
+                      />
+                      <span className="support-card__bond">絆: {support.bondLevel}</span>
+                    </div>
+                    <div className="support-card__style">
+                      {getStyleName(support.bonus.specialtyStyle)}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </Card>
         </div>
@@ -311,6 +586,15 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
               onClick={() => setActiveTab('lesson')}
             >
               レッスン
+            </button>
+            <button
+              className={`training-tab ${activeTab === 'bond' ? 'active' : ''} ${availableBondLessons.length > 0 ? 'highlight' : ''}`}
+              onClick={() => setActiveTab('bond')}
+            >
+              キズナ練習
+              {availableBondLessons.length > 0 && (
+                <span className="tab-badge">{availableBondLessons.length}</span>
+              )}
             </button>
             <button
               className={`training-tab ${activeTab === 'rest' ? 'active' : ''}`}
@@ -334,6 +618,7 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
 
           <div className="training-actions__content">
             {activeTab === 'lesson' && renderLessonTab()}
+            {activeTab === 'bond' && renderBondTab()}
             {activeTab === 'rest' && renderRestTab()}
             {activeTab === 'business' && renderBusinessTab()}
             {activeTab === 'facility' && renderFacilityTab()}
