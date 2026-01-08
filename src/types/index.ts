@@ -423,16 +423,41 @@ export interface EventEffect {
   scenarioId?: string;
 }
 
+/** イベントセリフ（掛け合い対応） */
+export interface EventDialogue {
+  speaker: 'player' | 'producer' | 'narrator' | string;  // キャラIDまたは役割
+  speakerName?: string;  // 表示名（キャラIDの場合は自動取得）
+  text: string;
+  emotion?: 'normal' | 'happy' | 'sad' | 'angry' | 'surprised' | 'shy';
+}
+
+/** キャラクターイベントタイプ */
+export type CharacterEventType = 'self_intro' | 'bond_1' | 'bond_2' | 'bond_3' | 'independent';
+
+/** イベントカテゴリ */
+export type EventCategory = 'scenario' | 'generic' | 'character';
+
 export interface GameEvent {
   id: string;
   name: string;
   description: string;
-  eventType: 'random' | 'bond' | 'story' | 'scenario' | 'weekly';
-  dialogue: string[];
+  eventType: 'random' | 'bond' | 'story' | 'scenario' | 'weekly' | 'self_intro' | 'generic';
+  category?: EventCategory;  // オプショナル（後方互換）
+  dialogue: string[];  // 旧形式（後方互換）
+  dialogues?: EventDialogue[];  // 新形式（掛け合い対応）
+  participantCharacterIds?: string[];  // 参加キャラクターID
   triggerCondition: EventTrigger;
   choices: EventChoice[];
   isRepeatable: boolean;
-  priority: number;  // 高いほど優先的に発生
+  priority: number;  // 高いほど優先的に発生（自己紹介は最優先）
+}
+
+/** キャラクター専用イベントセット */
+export interface CharacterEventSet {
+  characterId: string;
+  selfIntroEvent: GameEvent;       // 自己紹介イベント（1個、最優先）
+  bondEvents: GameEvent[];         // 絆イベント（3個）
+  independentEvents: GameEvent[];  // 独立イベント（1-2個）
 }
 
 export interface EventTrigger {

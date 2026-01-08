@@ -1,8 +1,492 @@
-import { GameEvent, PersonalityType } from '../types';
+import { GameEvent, PersonalityType, EventDialogue, CharacterEventSet } from '../types';
 
 // ===========================
 // イベントデータ
 // ===========================
+
+// ===========================
+// シナリオイベント（10個）- ストーリー進行
+// ===========================
+
+export const SCENARIO_EVENTS: GameEvent[] = [
+  {
+    id: 'scenario_01_prologue',
+    name: 'アイドルへの第一歩',
+    description: 'トレーニング開始',
+    eventType: 'scenario',
+    category: 'scenario',
+    dialogue: ['今日からアイドル育成が始まる。'],
+    dialogues: [
+      { speaker: 'narrator', text: '今日からアイドル育成が始まる。' },
+      { speaker: 'producer', text: '準備はいいかな？今日から本格的なトレーニングが始まるよ。' },
+      { speaker: 'player', text: 'はい！頑張ります！', emotion: 'happy' },
+    ],
+    triggerCondition: { type: 'week', week: 1 },
+    choices: [
+      { id: 'prologue_a', text: '全力で頑張ります！', effects: [{ type: 'condition', target: 'motivation', value: 20 }, { type: 'stats', target: 'passion', value: 10 }] },
+      { id: 'prologue_b', text: '着実に成長したい', effects: [{ type: 'stats', target: 'clever', value: 15 }, { type: 'condition', target: 'mental', value: 10 }] },
+    ],
+    isRepeatable: false,
+    priority: 1000,
+  },
+  {
+    id: 'scenario_02_first_lesson',
+    name: '初めてのレッスン',
+    description: '基礎を学ぶ',
+    eventType: 'scenario',
+    category: 'scenario',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'player', text: 'えっと...こうですか？', emotion: 'shy' },
+      { speaker: 'producer', text: 'うん、いい感じだよ。基礎が一番大事だからね。' },
+      { speaker: 'player', text: '難しいけど...楽しいです！', emotion: 'happy' },
+    ],
+    triggerCondition: { type: 'week', week: 3 },
+    choices: [
+      { id: 'lesson_a', text: 'もっと練習したい！', effects: [{ type: 'stats', target: 'passion', value: 15 }, { type: 'condition', target: 'fatigue', value: 10 }] },
+      { id: 'lesson_b', text: '復習をしっかり', effects: [{ type: 'stats', target: 'clever', value: 15 }] },
+    ],
+    isRepeatable: false,
+    priority: 100,
+  },
+  {
+    id: 'scenario_03_first_wall',
+    name: '最初の壁',
+    description: 'スランプの兆候',
+    eventType: 'scenario',
+    category: 'scenario',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'player', text: '最近、成長してる実感がなくて...', emotion: 'sad' },
+      { speaker: 'producer', text: '壁にぶつかってるんだね。でも、それは成長の証だよ。' },
+      { speaker: 'player', text: 'そう...なんですか？' },
+    ],
+    triggerCondition: { type: 'week', week: 6 },
+    choices: [
+      { id: 'wall_a', text: '今こそ追い込み時！', effects: [{ type: 'stats', target: 'passion', value: 25 }, { type: 'condition', target: 'fatigue', value: 15 }] },
+      { id: 'wall_b', text: '少し休もう', effects: [{ type: 'condition', target: 'fatigue', value: -20 }, { type: 'condition', target: 'mental', value: 15 }] },
+    ],
+    isRepeatable: false,
+    priority: 100,
+  },
+  {
+    id: 'scenario_04_rival',
+    name: 'ライバルとの出会い',
+    description: '刺激的な存在',
+    eventType: 'scenario',
+    category: 'scenario',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'narrator', text: '練習中、同年代のアイドル候補生と出会った。' },
+      { speaker: 'player', text: 'あの子、すごく上手い...', emotion: 'surprised' },
+      { speaker: 'player', text: '負けたくない...！', emotion: 'angry' },
+    ],
+    triggerCondition: { type: 'week', week: 9 },
+    choices: [
+      { id: 'rival_a', text: '絶対に負けない！', effects: [{ type: 'condition', target: 'motivation', value: 25 }, { type: 'stats', target: 'passion', value: 15 }] },
+      { id: 'rival_b', text: 'いいところを学ぼう', effects: [{ type: 'stats', target: 'clever', value: 20 }] },
+    ],
+    isRepeatable: false,
+    priority: 100,
+  },
+  {
+    id: 'scenario_05_midterm',
+    name: '中間審査',
+    description: '実力を試される',
+    eventType: 'scenario',
+    category: 'scenario',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'narrator', text: '育成期間の折り返し、中間審査の日。' },
+      { speaker: 'player', text: '緊張する...', emotion: 'shy' },
+      { speaker: 'producer', text: '今まで頑張ってきたことを、そのまま出せばいい。' },
+    ],
+    triggerCondition: { type: 'week', week: 13 },
+    choices: [
+      { id: 'mid_a', text: '全力でアピール！', effects: [{ type: 'stats', target: 'passion', value: 20 }, { type: 'stats', target: 'cute', value: 15 }] },
+      { id: 'mid_b', text: '冷静に実力を出す', effects: [{ type: 'stats', target: 'cool', value: 20 }, { type: 'stats', target: 'clever', value: 15 }] },
+    ],
+    isRepeatable: false,
+    priority: 100,
+  },
+  {
+    id: 'scenario_06_possibility',
+    name: '新たな可能性',
+    description: '才能の開花',
+    eventType: 'scenario',
+    category: 'scenario',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'producer', text: '最近、表現の幅が広がってきたね。' },
+      { speaker: 'player', text: 'そうですか？', emotion: 'shy' },
+      { speaker: 'producer', text: '新しいことに挑戦してみないか？' },
+    ],
+    triggerCondition: { type: 'week', week: 16 },
+    choices: [
+      { id: 'poss_a', text: 'ダンスを極めたい', effects: [{ type: 'stats', target: 'passion', value: 25 }, { type: 'stats', target: 'cool', value: 15 }] },
+      { id: 'poss_b', text: '表現力を磨きたい', effects: [{ type: 'stats', target: 'elegant', value: 25 }, { type: 'stats', target: 'cute', value: 15 }] },
+    ],
+    isRepeatable: false,
+    priority: 100,
+  },
+  {
+    id: 'scenario_07_setback',
+    name: '挫折',
+    description: '大きな失敗',
+    eventType: 'scenario',
+    category: 'scenario',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'player', text: '...ごめんなさい', emotion: 'sad' },
+      { speaker: 'producer', text: '失敗は誰にでもある。大事なのはここからだ。' },
+      { speaker: 'player', text: 'でも...みんなに迷惑を...', emotion: 'sad' },
+    ],
+    triggerCondition: { type: 'week', week: 18 },
+    choices: [
+      { id: 'set_a', text: 'もう一度やり直す', effects: [{ type: 'condition', target: 'motivation', value: 20 }, { type: 'stats', target: 'passion', value: 20 }] },
+      { id: 'set_b', text: '原因を分析する', effects: [{ type: 'stats', target: 'clever', value: 25 }, { type: 'condition', target: 'mental', value: 15 }] },
+    ],
+    isRepeatable: false,
+    priority: 100,
+  },
+  {
+    id: 'scenario_08_comeback',
+    name: '再起',
+    description: '立ち上がる時',
+    eventType: 'scenario',
+    category: 'scenario',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'player', text: 'プロデューサーさん、私...決めました。' },
+      { speaker: 'producer', text: 'うん、聞かせてくれ。' },
+      { speaker: 'player', text: '絶対に諦めない！', emotion: 'happy' },
+    ],
+    triggerCondition: { type: 'week', week: 20 },
+    choices: [
+      { id: 'come_a', text: '強い自分になる', effects: [{ type: 'stats', target: 'passion', value: 30 }, { type: 'condition', target: 'motivation', value: 30 }] },
+      { id: 'come_b', text: '自分らしさを大切に', effects: [{ type: 'stats', target: 'elegant', value: 20 }, { type: 'stats', target: 'cute', value: 20 }] },
+    ],
+    isRepeatable: false,
+    priority: 100,
+  },
+  {
+    id: 'scenario_09_final_prep',
+    name: '最終調整',
+    description: '集大成へ',
+    eventType: 'scenario',
+    category: 'scenario',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'narrator', text: '最終審査まであと僅か。' },
+      { speaker: 'producer', text: '最後の仕上げだ。どこを重点的にやる？' },
+      { speaker: 'player', text: '全部出し切りたいです。' },
+    ],
+    triggerCondition: { type: 'week', week: 24 },
+    choices: [
+      { id: 'prep_a', text: 'バランス良く', effects: [{ type: 'stats', target: 'cool', value: 15 }, { type: 'stats', target: 'elegant', value: 15 }, { type: 'stats', target: 'cute', value: 15 }] },
+      { id: 'prep_b', text: '得意分野を伸ばす', effects: [{ type: 'stats', target: 'passion', value: 30 }, { type: 'stats', target: 'clever', value: 20 }] },
+    ],
+    isRepeatable: false,
+    priority: 100,
+  },
+  {
+    id: 'scenario_10_final_night',
+    name: '最終審査前夜',
+    description: '決戦の前に',
+    eventType: 'scenario',
+    category: 'scenario',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'narrator', text: '明日で全てが決まる。最後の夜。' },
+      { speaker: 'player', text: 'プロデューサーさん...緊張します', emotion: 'shy' },
+      { speaker: 'producer', text: 'ここまでよく頑張った。明日は思い切り楽しんでこい。' },
+      { speaker: 'player', text: 'はい！最高のステージにします！', emotion: 'happy' },
+    ],
+    triggerCondition: { type: 'week', week: 26 },
+    choices: [
+      { id: 'final_a', text: 'ゆっくり休む', effects: [{ type: 'condition', target: 'fatigue', value: -30 }, { type: 'condition', target: 'mental', value: 30 }] },
+      { id: 'final_b', text: '最後の確認', effects: [{ type: 'condition', target: 'motivation', value: 40 }] },
+    ],
+    isRepeatable: false,
+    priority: 100,
+  },
+];
+
+// ===========================
+// 汎用イベント（10個）- ランダム発生
+// ===========================
+
+export const GENERIC_EVENTS: GameEvent[] = [
+  {
+    id: 'generic_01_weather',
+    name: '晴れた日の練習',
+    description: '気持ちのいい天気',
+    eventType: 'generic',
+    category: 'generic',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'narrator', text: '今日は絶好の練習日和だ。' },
+      { speaker: 'player', text: '気持ちいい！練習も捗りますね', emotion: 'happy' },
+    ],
+    triggerCondition: { type: 'random', probability: 100 },
+    choices: [
+      { id: 'weather_a', text: '外で練習！', effects: [{ type: 'condition', target: 'motivation', value: 15 }, { type: 'stats', target: 'passion', value: 10 }] },
+      { id: 'weather_b', text: '集中して室内練習', effects: [{ type: 'stats', target: 'clever', value: 15 }] },
+    ],
+    isRepeatable: true,
+    priority: 10,
+  },
+  {
+    id: 'generic_02_gift',
+    name: 'ファンからの差し入れ',
+    description: '応援の気持ち',
+    eventType: 'generic',
+    category: 'generic',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'producer', text: 'これ、ファンからの差し入れだよ。' },
+      { speaker: 'player', text: 'えっ、私にですか！？', emotion: 'surprised' },
+      { speaker: 'player', text: '嬉しい...もっと頑張らなきゃ！', emotion: 'happy' },
+    ],
+    triggerCondition: { type: 'random', probability: 100 },
+    choices: [
+      { id: 'gift_a', text: 'みんなで分けよう', effects: [{ type: 'condition', target: 'mental', value: 15 }, { type: 'stats', target: 'cute', value: 10 }] },
+      { id: 'gift_b', text: 'ありがたくいただく', effects: [{ type: 'condition', target: 'motivation', value: 20 }] },
+    ],
+    isRepeatable: true,
+    priority: 10,
+  },
+  {
+    id: 'generic_03_health',
+    name: '体調管理',
+    description: '健康第一',
+    eventType: 'generic',
+    category: 'generic',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'producer', text: '最近、無理してないか？' },
+      { speaker: 'player', text: '大丈夫です！...たぶん', emotion: 'shy' },
+    ],
+    triggerCondition: { type: 'random', probability: 100 },
+    choices: [
+      { id: 'health_a', text: 'しっかり休む', effects: [{ type: 'condition', target: 'fatigue', value: -25 }] },
+      { id: 'health_b', text: 'まだ大丈夫！', effects: [{ type: 'stats', target: 'passion', value: 15 }, { type: 'condition', target: 'fatigue', value: 10 }] },
+    ],
+    isRepeatable: true,
+    priority: 10,
+  },
+  {
+    id: 'generic_04_advice',
+    name: '先輩からのアドバイス',
+    description: '経験者の言葉',
+    eventType: 'generic',
+    category: 'generic',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'narrator', text: '事務所の先輩アイドルと話す機会があった。' },
+      { speaker: 'player', text: '参考になります！', emotion: 'happy' },
+    ],
+    triggerCondition: { type: 'random', probability: 100 },
+    choices: [
+      { id: 'advice_a', text: 'メモを取る', effects: [{ type: 'stats', target: 'clever', value: 20 }] },
+      { id: 'advice_b', text: '今すぐ実践', effects: [{ type: 'stats', target: 'passion', value: 15 }, { type: 'stats', target: 'cool', value: 10 }] },
+    ],
+    isRepeatable: true,
+    priority: 10,
+  },
+  {
+    id: 'generic_05_peers',
+    name: '同期との交流',
+    description: '仲間との時間',
+    eventType: 'generic',
+    category: 'generic',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'narrator', text: '同期のアイドル候補生と話す機会があった。' },
+      { speaker: 'player', text: '私も負けてられない！', emotion: 'happy' },
+    ],
+    triggerCondition: { type: 'random', probability: 100 },
+    choices: [
+      { id: 'peers_a', text: 'いいライバルだ', effects: [{ type: 'condition', target: 'motivation', value: 20 }, { type: 'stats', target: 'passion', value: 10 }] },
+      { id: 'peers_b', text: 'いい仲間だ', effects: [{ type: 'condition', target: 'mental', value: 20 }, { type: 'stats', target: 'cute', value: 10 }] },
+    ],
+    isRepeatable: true,
+    priority: 10,
+  },
+  {
+    id: 'generic_06_new_song',
+    name: '新曲の練習',
+    description: '新しい課題',
+    eventType: 'generic',
+    category: 'generic',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'producer', text: '新しい曲を用意したよ。' },
+      { speaker: 'player', text: 'わぁ、素敵な曲！', emotion: 'happy' },
+    ],
+    triggerCondition: { type: 'random', probability: 100 },
+    choices: [
+      { id: 'song_a', text: '歌を重点的に', effects: [{ type: 'stats', target: 'elegant', value: 20 }] },
+      { id: 'song_b', text: '振り付けから', effects: [{ type: 'stats', target: 'cool', value: 15 }, { type: 'stats', target: 'passion', value: 10 }] },
+    ],
+    isRepeatable: true,
+    priority: 10,
+  },
+  {
+    id: 'generic_07_rainy',
+    name: '雨の日',
+    description: '室内で何をする？',
+    eventType: 'generic',
+    category: 'generic',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'narrator', text: '外は雨。今日は室内での活動になりそうだ。' },
+      { speaker: 'player', text: 'やれることはたくさんある！' },
+    ],
+    triggerCondition: { type: 'random', probability: 100 },
+    choices: [
+      { id: 'rainy_a', text: '座学で知識を', effects: [{ type: 'stats', target: 'clever', value: 20 }] },
+      { id: 'rainy_b', text: '表情練習', effects: [{ type: 'stats', target: 'cute', value: 15 }, { type: 'stats', target: 'elegant', value: 10 }] },
+    ],
+    isRepeatable: true,
+    priority: 10,
+  },
+  {
+    id: 'generic_08_sns',
+    name: 'SNSでの反響',
+    description: 'ネットの声',
+    eventType: 'generic',
+    category: 'generic',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'producer', text: 'SNSで君のことが話題になってるよ。' },
+      { speaker: 'player', text: '嬉しい...期待に応えたい！', emotion: 'happy' },
+    ],
+    triggerCondition: { type: 'random', probability: 100 },
+    choices: [
+      { id: 'sns_a', text: 'ファンに返信', effects: [{ type: 'stats', target: 'cute', value: 15 }, { type: 'condition', target: 'motivation', value: 15 }] },
+      { id: 'sns_b', text: '練習に集中', effects: [{ type: 'stats', target: 'cool', value: 15 }, { type: 'stats', target: 'passion', value: 10 }] },
+    ],
+    isRepeatable: true,
+    priority: 10,
+  },
+  {
+    id: 'generic_09_costume',
+    name: '衣装合わせ',
+    description: '新しい衣装',
+    eventType: 'generic',
+    category: 'generic',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'producer', text: '新しい衣装ができたよ。試着してみて。' },
+      { speaker: 'player', text: 'わぁ...素敵！', emotion: 'happy' },
+    ],
+    triggerCondition: { type: 'random', probability: 100 },
+    choices: [
+      { id: 'costume_a', text: 'キュートに着こなす', effects: [{ type: 'stats', target: 'cute', value: 20 }] },
+      { id: 'costume_b', text: 'クールに決める', effects: [{ type: 'stats', target: 'cool', value: 15 }, { type: 'stats', target: 'elegant', value: 10 }] },
+    ],
+    isRepeatable: true,
+    priority: 10,
+  },
+  {
+    id: 'generic_10_dayoff',
+    name: '久しぶりの休日',
+    description: 'オフの過ごし方',
+    eventType: 'generic',
+    category: 'generic',
+    dialogue: [],
+    dialogues: [
+      { speaker: 'producer', text: '今日は休みだ。ゆっくり過ごしてくれ。' },
+      { speaker: 'player', text: 'えっ、いいんですか？' },
+    ],
+    triggerCondition: { type: 'random', probability: 100 },
+    choices: [
+      { id: 'dayoff_a', text: 'のんびり過ごす', effects: [{ type: 'condition', target: 'fatigue', value: -30 }, { type: 'condition', target: 'mental', value: 20 }] },
+      { id: 'dayoff_b', text: '自主練習', effects: [{ type: 'stats', target: 'passion', value: 20 }, { type: 'condition', target: 'motivation', value: 10 }] },
+    ],
+    isRepeatable: true,
+    priority: 10,
+  },
+];
+
+// ===========================
+// キャラクター別イベントヘルパー
+// ===========================
+
+/**
+ * キャラクター別イベントセットを生成
+ * - 自己紹介: 1個（最優先 priority: 1000）
+ * - 絆イベント: 3個（絆レベル20/50/80で発生）
+ * - 独立イベント: 1-2個（ランダム発生）
+ */
+export const createCharacterEventSet = (
+  characterId: string,
+  characterName: string,
+  selfIntroDialogues: EventDialogue[],
+  bondDialogues: [EventDialogue[], EventDialogue[], EventDialogue[]],
+  independentDialogues: EventDialogue[][]
+): CharacterEventSet => {
+  const selfIntroEvent: GameEvent = {
+    id: `${characterId}_self_intro`,
+    name: `${characterName}との出会い`,
+    description: '自己紹介',
+    eventType: 'self_intro',
+    category: 'character',
+    dialogue: [],
+    dialogues: selfIntroDialogues,
+    participantCharacterIds: [characterId],
+    triggerCondition: { type: 'bond', characterId, bondLevel: 0 },
+    choices: [
+      { id: `${characterId}_intro_a`, text: 'よろしくお願いします！', effects: [{ type: 'bond', characterId, value: 10 }, { type: 'condition', target: 'motivation', value: 10 }] },
+    ],
+    isRepeatable: false,
+    priority: 1000, // 自己紹介は最優先
+  };
+
+  const bondEvents = bondDialogues.map((dialogues, index): GameEvent => ({
+    id: `${characterId}_bond_${index + 1}`,
+    name: `${characterName}との絆${index + 1}`,
+    description: `絆が深まった`,
+    eventType: 'bond',
+    category: 'character',
+    dialogue: [],
+    dialogues,
+    participantCharacterIds: [characterId],
+    triggerCondition: { type: 'bond', characterId, bondLevel: [20, 50, 80][index] },
+    choices: [
+      { id: `${characterId}_bond_${index + 1}_a`, text: 'もっと仲良くなりたい', effects: [{ type: 'bond', characterId, value: 15 }, { type: 'condition', target: 'mental', value: 10 }] },
+    ],
+    isRepeatable: false,
+    priority: 50,
+  }));
+
+  const independentEvents = independentDialogues.map((dialogues, index): GameEvent => ({
+    id: `${characterId}_independent_${index + 1}`,
+    name: `${characterName}の日常`,
+    description: '何気ない一コマ',
+    eventType: 'random',
+    category: 'character',
+    dialogue: [],
+    dialogues,
+    participantCharacterIds: [characterId],
+    triggerCondition: { type: 'random', characterId, probability: 100 },
+    choices: [
+      { id: `${characterId}_ind_${index + 1}_a`, text: '一緒に過ごす', effects: [{ type: 'bond', characterId, value: 5 }, { type: 'condition', target: 'mental', value: 5 }] },
+    ],
+    isRepeatable: true,
+    priority: 10,
+  }));
+
+  return { characterId, selfIntroEvent, bondEvents, independentEvents };
+};
+
+// ===========================
+// イベント数取得
+// ===========================
+
+export const getScenarioEventCount = (): number => SCENARIO_EVENTS.length;
+export const getGenericEventCount = (): number => GENERIC_EVENTS.length;
 
 // 性格別イベントプール
 export const PERSONALITY_EVENTS: Record<PersonalityType, GameEvent[]> = {
@@ -853,3 +1337,123 @@ export const processDialogue = (
     return processed;
   });
 };
+
+// ===========================
+// 新イベント発生システム（均等確率・自己紹介優先）
+// ===========================
+
+export interface EventSelectionContext {
+  currentWeek: number;
+  completedEventIds: string[];
+  supportCharacterIds: string[];
+  characterBonds: Record<string, number>;
+  characterEventSets: CharacterEventSet[];
+}
+
+/**
+ * イベントを選択（均等確率・自己紹介優先）
+ * - 全イベントは等しい確率で発生
+ * - ただし自己紹介イベントが未完了なら優先
+ * - 合計発生率は約60%
+ */
+export const selectEventWithEqualProbability = (
+  context: EventSelectionContext
+): GameEvent | null => {
+  const { currentWeek, completedEventIds, characterEventSets, characterBonds } = context;
+
+  // 1. 自己紹介イベントを優先チェック（未完了のもの）
+  for (const charEvents of characterEventSets) {
+    const introEvent = charEvents.selfIntroEvent;
+    if (!completedEventIds.includes(introEvent.id)) {
+      // 自己紹介は必ず発生
+      return introEvent;
+    }
+  }
+
+  // 2. シナリオイベントチェック（週固定）
+  const scenarioEvent = SCENARIO_EVENTS.find(
+    e => e.triggerCondition.week === currentWeek && !completedEventIds.includes(e.id)
+  );
+  if (scenarioEvent) {
+    return scenarioEvent;
+  }
+
+  // 3. 絆イベントチェック（条件達成時）
+  for (const charEvents of characterEventSets) {
+    const bond = characterBonds[charEvents.characterId] || 0;
+    for (const bondEvent of charEvents.bondEvents) {
+      if (!completedEventIds.includes(bondEvent.id)) {
+        const requiredBond = bondEvent.triggerCondition.bondLevel || 0;
+        if (bond >= requiredBond) {
+          // 絆条件達成
+          return bondEvent;
+        }
+      }
+    }
+  }
+
+  // 4. ランダムイベント選択（均等確率）
+  // 合計60%の確率でイベント発生
+  const eventChance = Math.random() * 100;
+  if (eventChance > 60) {
+    return null; // イベント発生なし
+  }
+
+  // 利用可能なイベントを収集
+  const availableEvents: GameEvent[] = [];
+
+  // 汎用イベント
+  availableEvents.push(...GENERIC_EVENTS.filter(
+    e => e.isRepeatable || !completedEventIds.includes(e.id)
+  ));
+
+  // キャラクター独立イベント
+  for (const charEvents of characterEventSets) {
+    availableEvents.push(...charEvents.independentEvents.filter(
+      e => e.isRepeatable || !completedEventIds.includes(e.id)
+    ));
+  }
+
+  // 性格イベント・共通イベント・ラッキー・トラブルイベント
+  const legacyEvents = [
+    ...COMMON_EVENTS,
+    ...LUCKY_EVENTS,
+    ...TROUBLE_EVENTS,
+  ].filter(e => e.isRepeatable || !completedEventIds.includes(e.id));
+  availableEvents.push(...legacyEvents);
+
+  if (availableEvents.length === 0) {
+    return null;
+  }
+
+  // 均等確率で選択
+  const randomIndex = Math.floor(Math.random() * availableEvents.length);
+  return availableEvents[randomIndex];
+};
+
+/**
+ * シナリオイベントを週で取得
+ */
+export const getScenarioEventByWeek = (
+  week: number,
+  completedEventIds: string[]
+): GameEvent | null => {
+  return SCENARIO_EVENTS.find(
+    e => e.triggerCondition.week === week && !completedEventIds.includes(e.id)
+  ) || null;
+};
+
+/**
+ * 全イベント数のサマリーを取得
+ */
+export const getEventSummary = (characterCount: number): {
+  scenario: number;
+  generic: number;
+  characterTotal: number;
+  perCharacter: { selfIntro: number; bond: number; independent: string };
+} => ({
+  scenario: SCENARIO_EVENTS.length,
+  generic: GENERIC_EVENTS.length,
+  characterTotal: characterCount * (1 + 3 + 2), // 自己紹介1 + 絆3 + 独立2
+  perCharacter: { selfIntro: 1, bond: 3, independent: '1-2' },
+});
