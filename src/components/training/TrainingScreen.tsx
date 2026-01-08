@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Card, ProgressBar, StatDisplay, Modal } from '../ui';
 import { EventDialog } from '../event';
+import { BondTrainingEffect } from './BondTrainingEffect';
 import { useGameStore } from '../../store';
 import {
   LESSON_ACTIONS,
@@ -69,6 +70,12 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const [showCardGaugeModal, setShowCardGaugeModal] = useState(false);
   const [cardChoices, setCardChoices] = useState<CardType[]>([]);
+  const [bondEffectData, setBondEffectData] = useState<{
+    characterName: string;
+    statGain: number;
+    styleName: string;
+    bondGain: number;
+  } | null>(null);
 
   if (!session) {
     return <div>育成セッションがありません</div>;
@@ -172,20 +179,47 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
     setSelectedAction(null);
   };
 
+  // 絆練習エフェクト完了時の処理
+  const [pendingBondLesson, setPendingBondLesson] = useState<{
+    bondLesson: BondLessonAction;
+    baseEffect: number;
+  } | null>(null);
+
   const handleBondLessonAction = (bondLesson: BondLessonAction) => {
     const baseEffect = Math.floor(
       Math.random() * (bondLesson.baseEffect.max - bondLesson.baseEffect.min + 1) +
         bondLesson.baseEffect.min
     );
-    performBondLesson(
-      bondLesson.supportCharacterId,
-      bondLesson.targetStyle,
-      baseEffect,
-      bondLesson.bondBonus,
-      bondLesson.baseFatigue
-    );
-    advanceWeek();
-    setSelectedAction(null);
+
+    // Find the support character to get the name
+    const support = supportDeck.find(s => s.character.id === bondLesson.supportCharacterId);
+    const characterName = support?.character.name || 'キャラクター';
+
+    // Store pending lesson and show effect
+    setPendingBondLesson({ bondLesson, baseEffect });
+    setBondEffectData({
+      characterName,
+      statGain: baseEffect,
+      styleName: getStyleName(bondLesson.targetStyle),
+      bondGain: bondLesson.bondBonus,
+    });
+  };
+
+  const handleBondEffectComplete = () => {
+    if (pendingBondLesson) {
+      const { bondLesson, baseEffect } = pendingBondLesson;
+      performBondLesson(
+        bondLesson.supportCharacterId,
+        bondLesson.targetStyle,
+        baseEffect,
+        bondLesson.bondBonus,
+        bondLesson.baseFatigue
+      );
+      advanceWeek();
+      setSelectedAction(null);
+      setPendingBondLesson(null);
+    }
+    setBondEffectData(null);
   };
 
   const handleRestAction = (rest: RestAction) => {
@@ -620,6 +654,17 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
 
   return (
     <div className="training-screen">
+      {/* 絆練習エフェクト */}
+      {bondEffectData && (
+        <BondTrainingEffect
+          characterName={bondEffectData.characterName}
+          statGain={bondEffectData.statGain}
+          styleName={bondEffectData.styleName}
+          bondGain={bondEffectData.bondGain}
+          onComplete={handleBondEffectComplete}
+        />
+      )}
+
       {/* カードゲージ満タンモーダル */}
       {showCardGaugeModal && (
         <Modal isOpen={showCardGaugeModal} onClose={() => {}}>
