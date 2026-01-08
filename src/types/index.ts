@@ -226,7 +226,6 @@ export interface SupportBonus {
   conditionUp: number;            // 体調回復量UP
 
   // イベント系
-  eventRate: number;              // イベント発生率UP %
   eventEffectUp: number;          // イベント効果UP %
 
   // カード・スキル系

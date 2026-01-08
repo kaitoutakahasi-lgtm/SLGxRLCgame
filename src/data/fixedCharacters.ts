@@ -214,7 +214,6 @@ const createDefaultBonus = (
   motivationEffectUp: 10,
   fatigueReduction: 5,
   conditionUp: 5,
-  eventRate: 10,
   eventEffectUp: 10,
   cardGaugeBonus: 5,
   hintRate: 20,
@@ -406,7 +405,6 @@ export const FIXED_CHARACTER_BONUSES: Record<string, SupportBonus> = {
     hintRate: 25,
   }),
   mio: createDefaultBonus('cute', {
-    eventRate: 20,
     eventEffectUp: 20,
     cardGaugeBonus: 10,
   }),

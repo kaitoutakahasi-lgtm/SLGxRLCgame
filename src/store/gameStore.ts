@@ -659,47 +659,32 @@ export const useGameStore = create<GameStore>()(
         }
 
         // ===== イベント発生チェック =====
-        // イベント基準確率: 合計約60%（各イベント独立判定）
-        // - シナリオイベント: 10%
-        // - 絆イベント: 各サポート10%（eventRateで上昇）
-        // - ランダムイベント: 15%
+        // イベントは100%発生（利用可能なイベントがあれば必ず発生）
+        // 優先順: シナリオ > 絆 > ランダム
 
         let randomEvent: GameEvent | null = null;
 
-        // サポートのeventRateボーナス合計
-        const totalEventBonus = session.supportDeck.reduce(
-          (sum, s) => sum + (s.bonus.eventRate || 0), 0
-        );
-
-        // シナリオイベント判定（10%）
-        const scenarioRoll = Math.random() * 100;
-        if (scenarioRoll < 10 + totalEventBonus / 5) { // eventBonusの1/5がシナリオに影響
-          const scenarioEvent = get().checkScenarioEvent();
-          if (scenarioEvent) {
-            randomEvent = scenarioEvent;
-          }
+        // シナリオイベント（週固定）
+        const scenarioEvent = get().checkScenarioEvent();
+        if (scenarioEvent) {
+          randomEvent = scenarioEvent;
         }
 
-        // 絆イベント判定（未発生の場合、各サポート独立10%）
+        // 絆イベント判定（未発生の場合、条件達成順にチェック）
         if (!randomEvent && !session.currentEvent) {
           for (const support of session.supportDeck) {
             if (!support.bondEvents) continue;
 
-            const bondEventRate = 10 + (support.bonus.eventRate || 0);
-            const bondRoll = Math.random() * 100;
-
-            if (bondRoll < bondEventRate) {
-              // 未クリアのイベントをチェック
-              if (support.bondLevel >= BOND_THRESHOLDS.EVENT_3 && !support.bondProgress.event3Cleared) {
-                randomEvent = get().triggerBondEvent(support.character.id, 3);
-                break;
-              } else if (support.bondLevel >= BOND_THRESHOLDS.EVENT_2 && !support.bondProgress.event2Cleared) {
-                randomEvent = get().triggerBondEvent(support.character.id, 2);
-                break;
-              } else if (support.bondLevel >= BOND_THRESHOLDS.EVENT_1 && !support.bondProgress.event1Cleared) {
-                randomEvent = get().triggerBondEvent(support.character.id, 1);
-                break;
-              }
+            // 未クリアのイベントをチェック（条件達成順）
+            if (support.bondLevel >= BOND_THRESHOLDS.EVENT_3 && !support.bondProgress.event3Cleared) {
+              randomEvent = get().triggerBondEvent(support.character.id, 3);
+              break;
+            } else if (support.bondLevel >= BOND_THRESHOLDS.EVENT_2 && !support.bondProgress.event2Cleared) {
+              randomEvent = get().triggerBondEvent(support.character.id, 2);
+              break;
+            } else if (support.bondLevel >= BOND_THRESHOLDS.EVENT_1 && !support.bondProgress.event1Cleared) {
+              randomEvent = get().triggerBondEvent(support.character.id, 1);
+              break;
             }
           }
         }
