@@ -7,6 +7,8 @@ import {
   TrainingCharacter,
   TrainingSession,
   BattleState,
+  BattleParticipant,
+  BattlePhase,
   SupportCharacter,
   OwnedFacility,
   Card,
@@ -205,12 +207,15 @@ interface GameStore extends GameState {
   addGold: (amount: number) => void;
   spendGold: (amount: number) => boolean;
 
-  // ライブバトル
+  // ライブバトル（4人バトロワ版）
   startBattle: (opponentLevel: number) => void;
   selectCards: (cardIndices: number[]) => void;
-  resolveCards: () => void;
+  setBattlePhase: (phase: BattlePhase) => void;
+  resolveNextParticipant: () => boolean; // 次の参加者を解決、全員終了したらfalse
   nextTurn: () => void;
   endBattle: () => BattleResult;
+  getPlayerParticipant: () => BattleParticipant | null;
+  getTurnOrder: () => BattleParticipant[];
 
   // 設定
   updateSettings: (updates: Partial<GameState['settings']>) => void;
@@ -1230,55 +1235,82 @@ export const useGameStore = create<GameStore>()(
         return true;
       },
 
-      // === ライブバトル ===
+      // === ライブバトル（4人バトロワ版）===
       startBattle: (opponentLevel) => {
         const session = get().currentSession;
         if (!session) return;
 
-        // デッキからランダムに10枚選択（重複なし）
-        const availableCards = [...session.character.cards];
-        const deck: Card[] = [];
-        for (let i = 0; i < 10 && availableCards.length > 0; i++) {
-          const index = Math.floor(Math.random() * availableCards.length);
-          deck.push(availableCards.splice(index, 1)[0]);
+        // ライバル名とカラー
+        const rivalNames = ['星野ミライ', '月宮カレン', '天城リオン'];
+        const rivalColors = ['#f87171', '#a78bfa', '#4ade80'];
+        const styles: Style[] = ['cool', 'elegant', 'cute', 'clever', 'passion'];
+
+        // プレイヤーのデッキを準備
+        const playerCards = [...session.character.cards];
+        const playerDeck: Card[] = [];
+        for (let i = 0; i < 10 && playerCards.length > 0; i++) {
+          const index = Math.floor(Math.random() * playerCards.length);
+          playerDeck.push(playerCards.splice(index, 1)[0]);
         }
+        const playerHand = playerDeck.splice(0, 4);
 
-        // 初期手札4枚
-        const hand = deck.splice(0, 4);
+        // プレイヤー参加者を作成
+        const playerParticipant: BattleParticipant = {
+          id: 'player',
+          name: session.character.name,
+          isPlayer: true,
+          style: getBestStyle(session.character.stats),
+          deck: playerDeck,
+          hand: playerHand,
+          discard: [],
+          stamina: 6,
+          maxStamina: 6,
+          stars: 0,
+          actionSpeed: session.character.actionSpeed,
+          selectedCards: [],
+          fullRecoveryUsed: false,
+          avatarColor: '#60a5fa',
+        };
 
-        // 相手のデッキ生成（簡易版）
-        const opponentDeck = getStarterDeck();
-        const opponentHand = opponentDeck.splice(0, 4);
+        // AI参加者を3人作成
+        const aiParticipants: BattleParticipant[] = rivalNames.map((name, i) => {
+          const aiDeck = getStarterDeck();
+          const aiHand = aiDeck.splice(0, 4);
+          const baseSpeed = 3 + opponentLevel + Math.floor(Math.random() * 5);
+          return {
+            id: `ai_${i}`,
+            name,
+            isPlayer: false,
+            style: styles[Math.floor(Math.random() * styles.length)],
+            deck: aiDeck,
+            hand: aiHand,
+            discard: [],
+            stamina: 6,
+            maxStamina: 6,
+            stars: 0,
+            actionSpeed: baseSpeed,
+            selectedCards: [],
+            fullRecoveryUsed: false,
+            avatarColor: rivalColors[i],
+          };
+        });
+
+        // 全参加者を速度順にソート
+        const allParticipants = [playerParticipant, ...aiParticipants];
+        allParticipants.sort((a, b) => b.actionSpeed - a.actionSpeed);
 
         const battleState: BattleState = {
           turn: 1,
           maxTurns: 5,
           trend: getRandomStyle(),
-          playerState: {
-            deck,
-            hand,
-            discard: [],
-            stamina: 6,
-            maxStamina: 6,
-            stars: 0,
-            actionSpeed: session.character.actionSpeed,
-            selectedCards: [],
-            fullRecoveryUsed: false,
-          },
-          opponentState: {
-            deck: opponentDeck,
-            hand: opponentHand,
-            discard: [],
-            stamina: 6,
-            maxStamina: 6,
-            stars: 0,
-            actionSpeed: 5 + opponentLevel,
-            selectedCards: [],
-            fullRecoveryUsed: false,
-          },
+          participants: allParticipants,
           voltage: 0,
           voltageMax: 10,
           voltageClaimed: false,
+          phase: 'card_select',
+          currentResolveIndex: 0,
+          resolveAnimations: [],
+          turnOrder: allParticipants.map(p => p.id),
         };
 
         set({ currentBattle: battleState });
@@ -1288,142 +1320,169 @@ export const useGameStore = create<GameStore>()(
         const battle = get().currentBattle;
         if (!battle) return;
 
-        const selectedCards = cardIndices.map((i) => battle.playerState.hand[i]);
+        const playerIndex = battle.participants.findIndex(p => p.isPlayer);
+        if (playerIndex === -1) return;
+
+        const player = battle.participants[playerIndex];
+        const selectedCards = cardIndices.map((i) => player.hand[i]);
         const totalCost = selectedCards.reduce((sum, card) => sum + card.cost, 0);
 
-        if (totalCost > battle.playerState.stamina) return;
+        if (totalCost > player.stamina) return;
+
+        const updatedParticipants = [...battle.participants];
+        updatedParticipants[playerIndex] = {
+          ...player,
+          selectedCards,
+        };
+
+        // AIもカードを選択（簡易AI）
+        updatedParticipants.forEach((p, i) => {
+          if (!p.isPlayer && p.selectedCards.length === 0) {
+            // スタミナ内で1-2枚選択
+            const availableCards = p.hand.filter(c => c.cost <= p.stamina);
+            if (availableCards.length > 0) {
+              const numCards = Math.min(2, availableCards.length);
+              const aiSelected: Card[] = [];
+              let remainingStamina = p.stamina;
+              for (let j = 0; j < numCards && availableCards.length > 0; j++) {
+                const affordable = availableCards.filter(c => c.cost <= remainingStamina);
+                if (affordable.length === 0) break;
+                const card = affordable[Math.floor(Math.random() * affordable.length)];
+                aiSelected.push(card);
+                remainingStamina -= card.cost;
+                availableCards.splice(availableCards.indexOf(card), 1);
+              }
+              updatedParticipants[i] = { ...p, selectedCards: aiSelected };
+            }
+          }
+        });
 
         set({
           currentBattle: {
             ...battle,
-            playerState: {
-              ...battle.playerState,
-              selectedCards,
-            },
+            participants: updatedParticipants,
           },
         });
       },
 
-      resolveCards: () => {
+      setBattlePhase: (phase) => {
         const battle = get().currentBattle;
         if (!battle) return;
-
-        // 簡易版：スター計算
-        let playerStars = 0;
-        let opponentStars = 0;
-
-        battle.playerState.selectedCards.forEach((card) => {
-          card.effects.forEach((effect) => {
-            if (effect.type === 'appeal' && effect.target === 'self') {
-              playerStars += effect.value;
-            }
-          });
-          // トレンドボーナス
-          if (card.style === battle.trend) {
-            playerStars += 1;
-          }
-        });
-
-        // 相手AI（ランダム選択）
-        const opponentCards = battle.opponentState.hand.slice(0, 2);
-        opponentCards.forEach((card) => {
-          card.effects.forEach((effect) => {
-            if (effect.type === 'appeal' && effect.target === 'self') {
-              opponentStars += effect.value;
-            }
-          });
-          if (card.style === battle.trend) {
-            opponentStars += 1;
-          }
-        });
-
-        // スタミナ消費
-        const playerCost = battle.playerState.selectedCards.reduce(
-          (sum, card) => sum + card.cost,
-          0
-        );
-        const opponentCost = opponentCards.reduce((sum, card) => sum + card.cost, 0);
-
-        // カードを捨て札へ
-        const newPlayerHand = battle.playerState.hand.filter(
-          (card) => !battle.playerState.selectedCards.includes(card)
-        );
-        const newOpponentHand = battle.opponentState.hand.filter(
-          (card) => !opponentCards.includes(card)
-        );
 
         set({
           currentBattle: {
             ...battle,
-            playerState: {
-              ...battle.playerState,
-              hand: newPlayerHand,
-              discard: [...battle.playerState.discard, ...battle.playerState.selectedCards],
-              stamina: battle.playerState.stamina - playerCost,
-              stars: battle.playerState.stars + playerStars,
-              selectedCards: [],
-            },
-            opponentState: {
-              ...battle.opponentState,
-              hand: newOpponentHand,
-              discard: [...battle.opponentState.discard, ...opponentCards],
-              stamina: battle.opponentState.stamina - opponentCost,
-              stars: battle.opponentState.stars + opponentStars,
-            },
+            phase,
+            currentResolveIndex: phase === 'card_resolve' ? 0 : battle.currentResolveIndex,
           },
         });
+      },
+
+      resolveNextParticipant: () => {
+        const battle = get().currentBattle;
+        if (!battle) return false;
+
+        const { currentResolveIndex, participants, trend } = battle;
+        if (currentResolveIndex >= participants.length) return false;
+
+        const participant = participants[currentResolveIndex];
+        let earnedStars = 0;
+        let voltageGain = 0;
+
+        // カード効果を計算
+        participant.selectedCards.forEach((card) => {
+          card.effects.forEach((effect) => {
+            if (effect.type === 'appeal' && effect.target === 'self') {
+              earnedStars += effect.value;
+            }
+            if (effect.type === 'voltage') {
+              voltageGain += effect.value;
+            }
+          });
+          // トレンドボーナス
+          if (card.style === trend) {
+            earnedStars += 1;
+            voltageGain += 1;
+          }
+        });
+
+        // スタミナ消費
+        const cost = participant.selectedCards.reduce((sum, card) => sum + card.cost, 0);
+
+        // 手札からカードを削除
+        const newHand = participant.hand.filter(
+          (card) => !participant.selectedCards.includes(card)
+        );
+
+        // 参加者を更新
+        const updatedParticipants = [...participants];
+        updatedParticipants[currentResolveIndex] = {
+          ...participant,
+          hand: newHand,
+          discard: [...participant.discard, ...participant.selectedCards],
+          stamina: participant.stamina - cost,
+          stars: participant.stars + earnedStars,
+          selectedCards: [],
+        };
+
+        // 次のインデックスへ
+        const nextIndex = currentResolveIndex + 1;
+        const hasMore = nextIndex < participants.length;
+
+        set({
+          currentBattle: {
+            ...battle,
+            participants: updatedParticipants,
+            voltage: clamp(battle.voltage + voltageGain, 0, battle.voltageMax),
+            currentResolveIndex: nextIndex,
+          },
+        });
+
+        return hasMore;
       },
 
       nextTurn: () => {
         const battle = get().currentBattle;
         if (!battle) return;
 
-        // ターン開始処理
         const newTurn = battle.turn + 1;
         const newTrend = getRandomStyle();
 
-        // スタミナ+1、2枚ドロー
-        let playerHand = [...battle.playerState.hand];
-        let playerDeck = [...battle.playerState.deck];
-        for (let i = 0; i < 2 && playerDeck.length > 0; i++) {
-          playerHand.push(playerDeck.shift()!);
-        }
-        if (playerHand.length > 7) {
-          playerHand = playerHand.slice(0, 7);
-        }
+        // 全参加者の手札とスタミナを更新
+        const updatedParticipants = battle.participants.map((p) => {
+          let hand = [...p.hand];
+          let deck = [...p.deck];
 
-        let opponentHand = [...battle.opponentState.hand];
-        let opponentDeck = [...battle.opponentState.deck];
-        for (let i = 0; i < 2 && opponentDeck.length > 0; i++) {
-          opponentHand.push(opponentDeck.shift()!);
-        }
-        if (opponentHand.length > 7) {
-          opponentHand = opponentHand.slice(0, 7);
-        }
+          // 2枚ドロー
+          for (let i = 0; i < 2 && deck.length > 0; i++) {
+            hand.push(deck.shift()!);
+          }
+          // 手札上限7枚
+          if (hand.length > 7) {
+            hand = hand.slice(0, 7);
+          }
+
+          return {
+            ...p,
+            deck,
+            hand,
+            stamina: Math.min(p.stamina + 1, p.maxStamina),
+            selectedCards: [],
+          };
+        });
+
+        // 速度順で並び替え
+        updatedParticipants.sort((a, b) => b.actionSpeed - a.actionSpeed);
 
         set({
           currentBattle: {
             ...battle,
             turn: newTurn,
             trend: newTrend,
-            playerState: {
-              ...battle.playerState,
-              deck: playerDeck,
-              hand: playerHand,
-              stamina: Math.min(
-                battle.playerState.stamina + 1,
-                battle.playerState.maxStamina
-              ),
-            },
-            opponentState: {
-              ...battle.opponentState,
-              deck: opponentDeck,
-              hand: opponentHand,
-              stamina: Math.min(
-                battle.opponentState.stamina + 1,
-                battle.opponentState.maxStamina
-              ),
-            },
+            participants: updatedParticipants,
+            phase: 'card_select',
+            currentResolveIndex: 0,
+            turnOrder: updatedParticipants.map(p => p.id),
           },
         });
       },
@@ -1432,22 +1491,38 @@ export const useGameStore = create<GameStore>()(
         const battle = get().currentBattle;
         const session = get().currentSession;
 
+        // ランキングを計算
+        const rankings = battle
+          ? [...battle.participants]
+              .sort((a, b) => b.stars - a.stars)
+              .map((p, i) => ({
+                participantId: p.id,
+                name: p.name,
+                stars: p.stars,
+                isPlayer: p.isPlayer,
+              }))
+          : [];
+
+        const playerRank = rankings.findIndex(r => r.isPlayer) + 1;
+
+        // 順位に応じた報酬
+        const rewardsByRank = [
+          { gold: 800, fame: 80, cardGauge: 30 }, // 1位
+          { gold: 500, fame: 50, cardGauge: 20 }, // 2位
+          { gold: 200, fame: 20, cardGauge: 10 }, // 3位
+          { gold: 100, fame: 10, cardGauge: 5 },  // 4位
+        ];
+
+        const reward = rewardsByRank[playerRank - 1] || rewardsByRank[3];
+
         const result: BattleResult = {
-          winner:
-            !battle
-              ? 'draw'
-              : battle.playerState.stars > battle.opponentState.stars
-              ? 'player'
-              : battle.playerState.stars < battle.opponentState.stars
-              ? 'opponent'
-              : 'draw',
-          playerStars: battle?.playerState.stars || 0,
-          opponentStars: battle?.opponentState.stars || 0,
+          rankings,
+          playerRank,
           rewards: {
-            gold: battle?.playerState.stars || 0 > (battle?.opponentState.stars || 0) ? 500 : 100,
-            fame: battle?.playerState.stars || 0 > (battle?.opponentState.stars || 0) ? 50 : 10,
+            gold: reward.gold,
+            fame: reward.fame,
             cards: [],
-            cardGauge: battle?.playerState.stars || 0 > (battle?.opponentState.stars || 0) ? 20 : 5,
+            cardGauge: reward.cardGauge,
           },
         };
 
@@ -1473,6 +1548,18 @@ export const useGameStore = create<GameStore>()(
         }
 
         return result;
+      },
+
+      getPlayerParticipant: () => {
+        const battle = get().currentBattle;
+        if (!battle) return null;
+        return battle.participants.find(p => p.isPlayer) || null;
+      },
+
+      getTurnOrder: () => {
+        const battle = get().currentBattle;
+        if (!battle) return [];
+        return [...battle.participants].sort((a, b) => b.actionSpeed - a.actionSpeed);
       },
 
       // === 設定 ===

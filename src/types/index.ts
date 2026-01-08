@@ -487,18 +487,60 @@ export interface Audition {
 }
 
 // ===========================
-// ライブバトルシステム
+// ライブバトルシステム（4人バトロワ版）
 // ===========================
+
+/** バトル参加者（プレイヤーまたはAI） */
+export interface BattleParticipant {
+  id: string;
+  name: string;
+  isPlayer: boolean;
+  style: Style; // キャラの得意スタイル
+  deck: Card[];
+  hand: Card[];
+  discard: Card[];
+  stamina: number;
+  maxStamina: number;
+  stars: number;
+  actionSpeed: number;
+  selectedCards: Card[];
+  fullRecoveryUsed: boolean;
+  avatarColor: string; // キャラクターの色
+}
+
+/** バトルフェーズ */
+export type BattlePhase =
+  | 'card_select'       // カード選択中
+  | 'round_start'       // ラウンド開始演出
+  | 'card_resolve'      // カード解決（速度順）
+  | 'effect_display'    // エフェクト表示中
+  | 'turn_end'          // ターン終了演出
+  | 'result';           // 結果表示
+
+/** カード解決アニメーション状態 */
+export interface CardResolveAnimation {
+  participantId: string;
+  cardIndex: number;
+  card: Card;
+  effects: {
+    type: 'voltage_up' | 'star_gain' | 'damage' | 'heal' | 'buff' | 'debuff';
+    value: number;
+    targetId?: string;
+  }[];
+}
 
 export interface BattleState {
   turn: number;
   maxTurns: number;
   trend: Style;
-  playerState: PlayerBattleState;
-  opponentState: PlayerBattleState;
+  participants: BattleParticipant[]; // 4人の参加者（速度順にソート済み）
   voltage: number;
   voltageMax: number;
   voltageClaimed: boolean;
+  phase: BattlePhase;
+  currentResolveIndex: number; // 現在解決中の参加者インデックス
+  resolveAnimations: CardResolveAnimation[]; // アニメーションキュー
+  turnOrder: string[]; // 今のターンの行動順（速度順のID配列）
 }
 
 export interface PlayerBattleState {
@@ -514,9 +556,8 @@ export interface PlayerBattleState {
 }
 
 export interface BattleResult {
-  winner: 'player' | 'opponent' | 'draw';
-  playerStars: number;
-  opponentStars: number;
+  rankings: { participantId: string; name: string; stars: number; isPlayer: boolean }[];
+  playerRank: number; // 1-4
   rewards: {
     gold: number;
     fame: number;
