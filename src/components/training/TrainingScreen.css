@@ -629,6 +629,158 @@
   color: #94a3b8;
 }
 
+/* 怪我状態表示 */
+.training-injury-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.training-injury-status .injury-icon {
+  font-size: 18px;
+}
+
+.training-injury-status .injury-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fca5a5;
+}
+
+.training-injury-status .injury-remaining {
+  font-size: 12px;
+  color: #f87171;
+}
+
+/* 練習カードの追加スタイル */
+.training-action__header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.training-action__tag-bonus {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #1c1917;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.training-action__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.training-action__injury {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* サポートアイコンの友情表示 */
+.support-icon.friendship {
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+  box-shadow: 0 0 8px rgba(236, 72, 153, 0.5);
+}
+
+/* 練習配置サポート */
+.training-action__supports {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.training-action__supports .support-icon {
+  width: 22px;
+  height: 22px;
+  font-size: 10px;
+  cursor: default;
+  transition: transform 0.2s ease;
+}
+
+.training-action__supports .support-icon:hover {
+  transform: scale(1.1);
+}
+
+/* レアスキル（金特）獲得モーダル */
+.rare-skill-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 16px;
+  text-align: center;
+}
+
+.rare-skill-modal__icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: rareSkillPulse 1.5s infinite;
+  box-shadow: 0 4px 20px rgba(251, 191, 36, 0.5);
+}
+
+.rare-skill-modal__icon span {
+  font-size: 36px;
+  font-weight: 900;
+  color: #1c1917;
+}
+
+@keyframes rareSkillPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 20px rgba(251, 191, 36, 0.5);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 8px 30px rgba(251, 191, 36, 0.7);
+  }
+}
+
+.rare-skill-modal h2 {
+  font-size: 24px;
+  color: #fbbf24;
+  margin: 0;
+  text-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+}
+
+.rare-skill-modal__card {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  border: 2px solid #fbbf24;
+  border-radius: 12px;
+  padding: 20px;
+  width: 220px;
+  text-align: left;
+  box-shadow: 0 4px 20px rgba(251, 191, 36, 0.3);
+}
+
+.rare-skill-modal__card h3 {
+  font-size: 16px;
+  color: #f1f5f9;
+  margin: 8px 0 4px 0;
+}
+
+.rare-skill-modal__card p {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0 0 12px 0;
+}
+
 @media (max-width: 900px) {
   .training-screen__main {
     grid-template-columns: 1fr;

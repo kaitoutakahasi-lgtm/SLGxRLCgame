@@ -26,10 +26,15 @@ import {
   CardAcquisitionGauge,
   SkillHint,
   ScenarioProgress,
+  TrainingPositions,
+  InjuryType,
+  INJURY_TYPES,
 } from '../types';
 import { getStarterDeck } from '../data/cards';
 import { getTotalLessonBonus, FACILITIES } from '../data/facilities';
 import { checkScenarioConditions, ScenarioEvent } from '../data/scenarios';
+import { assignTrainingPositions, checkInjury, calculateTagBonus } from '../data/actions';
+import { canAcquireRareSkill, createRareSkillCard, getRareSkillByCharacterId } from '../data/rareSkills';
 
 // ===========================
 // ユーティリティ関数
@@ -80,12 +85,26 @@ const createInitialScenarioProgress = (): ScenarioProgress => ({
   flags: {},
 });
 
-// サポートキャラ配置決定（各練習に何人いるか）
-const assignTrainingParticipants = (supportDeck: SupportCharacter[]): string[] => {
-  // ランダムに3〜6人を今週の練習に配置
-  const shuffled = [...supportDeck].sort(() => Math.random() - 0.5);
-  const count = Math.floor(Math.random() * 4) + 3; // 3〜6
-  return shuffled.slice(0, Math.min(count, shuffled.length)).map(s => s.character.id);
+// 初期練習配置
+const createInitialTrainingPositions = (): TrainingPositions => ({
+  dance_lesson: [],
+  vocal_lesson: [],
+  expression_lesson: [],
+  study_lesson: [],
+  physical_training: [],
+  general_lesson: [],
+});
+
+// サポートキャラ配置決定（後方互換のためtrainingParticipantsも更新）
+const getTrainingParticipants = (positions: TrainingPositions): string[] => {
+  return [
+    ...positions.dance_lesson,
+    ...positions.vocal_lesson,
+    ...positions.expression_lesson,
+    ...positions.study_lesson,
+    ...positions.physical_training,
+    ...positions.general_lesson,
+  ];
 };
 
 // ===========================
@@ -131,7 +150,9 @@ interface GameStore extends GameState {
     style: Style | 'all',
     baseEffect: number,
     fatigue: number,
-    participantIds?: string[]
+    participantIds?: string[],
+    lessonId?: string,
+    baseInjuryRate?: number
   ) => void;
   performBondLesson: (
     supportCharacterId: string,
@@ -171,6 +192,10 @@ interface GameStore extends GameState {
   // カード
   addCard: (card: Card) => void;
   removeCard: (cardId: string) => void;
+
+  // レアスキル
+  checkRareSkillAcquisition: () => { characterId: string; skillId: string }[];
+  acquireRareSkill: (characterId: string) => Card | null;
 
   // コンディション
   updateCondition: (updates: Partial<CharacterCondition>) => void;
@@ -256,6 +281,10 @@ export const useGameStore = create<GameStore>()(
           support.bondLevel = support.bonus.initialBond || 0;
         });
 
+        // 初期配置を計算
+        const initialPositions = assignTrainingPositions(supportDeck);
+        const initialParticipants = getTrainingParticipants(initialPositions);
+
         const session: TrainingSession = {
           character: trainingCharacter,
           supportDeck,
@@ -270,7 +299,10 @@ export const useGameStore = create<GameStore>()(
           skillHints: [],
           scenario: createInitialScenarioProgress(),
           currentEvent: null,
-          trainingParticipants: assignTrainingParticipants(supportDeck),
+          trainingParticipants: initialParticipants,
+          trainingPositions: initialPositions,
+          currentInjury: null,
+          acquiredRareSkills: [],
         };
 
         set({
@@ -306,9 +338,14 @@ export const useGameStore = create<GameStore>()(
       },
 
       // === 週間行動 ===
-      performLesson: (style, baseEffect, fatigue, participantIds = []) => {
+      performLesson: (style, baseEffect, fatigue, participantIds = [], lessonId?: string, baseInjuryRate: number = 0) => {
         const session = get().currentSession;
         if (!session) return;
+
+        // 怪我中は効果減少
+        const injuryPenalty = session.currentInjury
+          ? INJURY_TYPES[session.currentInjury.type].statPenalty / 100
+          : 0;
 
         const facilityBonus = style === 'all'
           ? 0
@@ -321,6 +358,13 @@ export const useGameStore = create<GameStore>()(
           : session.character.condition.fatigue <= 80
           ? 0.6
           : 0.4;
+
+        // タッグボーナス計算（同じ練習に複数サポートがいる場合）
+        let tagBonus = 0;
+        if (lessonId && session.trainingPositions) {
+          const { bonus } = calculateTagBonus(lessonId, session.trainingPositions, session.supportDeck);
+          tagBonus = bonus;
+        }
 
         // サポートボーナス計算
         let supportBonus = 0;
@@ -338,7 +382,7 @@ export const useGameStore = create<GameStore>()(
         });
 
         const finalEffect = Math.floor(
-          baseEffect * (1 + facilityBonus / 100 + motivationBonus + supportBonus / 100) * fatigueEfficiency
+          baseEffect * (1 + facilityBonus / 100 + motivationBonus + supportBonus / 100 + tagBonus / 100) * fatigueEfficiency * (1 - injuryPenalty)
         );
 
         const updatedStats = { ...session.character.stats };
@@ -353,9 +397,45 @@ export const useGameStore = create<GameStore>()(
           updatedStats[style] += finalEffect;
         }
 
+        // 怪我判定
+        let newInjury = session.currentInjury;
+        if (!session.currentInjury && baseInjuryRate > 0) {
+          // 設備による怪我率軽減
+          const injuryFacility = session.facilities.find((f) => f.facilityId === 'medical_room');
+          const facilityReduction = injuryFacility
+            ? FACILITIES.find((f) => f.id === 'medical_room')?.effects.find(e => e.type === 'injury_reduction')?.valuePerLevel || 0
+            : 0;
+
+          // 疲労による怪我率増加を計算
+          let finalInjuryRate = baseInjuryRate;
+          const currentFatigue = session.character.condition.fatigue;
+          if (currentFatigue >= 80) {
+            finalInjuryRate += 30;
+          } else if (currentFatigue >= 60) {
+            finalInjuryRate += 15;
+          } else if (currentFatigue >= 50) {
+            finalInjuryRate += 5;
+          }
+          finalInjuryRate = finalInjuryRate * (1 - facilityReduction / 100);
+
+          const injuryResult = checkInjury(finalInjuryRate);
+          if (injuryResult) {
+            newInjury = {
+              type: injuryResult,
+              remainingWeeks: INJURY_TYPES[injuryResult].duration,
+            };
+          }
+        }
+
+        // 怪我した場合の追加疲労
+        let additionalFatigue = 0;
+        if (newInjury && newInjury !== session.currentInjury) {
+          additionalFatigue = INJURY_TYPES[newInjury.type].fatigueIncrease;
+        }
+
         const updatedCondition = {
           ...session.character.condition,
-          fatigue: clamp(session.character.condition.fatigue + fatigue, 0, 100),
+          fatigue: clamp(session.character.condition.fatigue + fatigue + additionalFatigue, 0, 100),
         };
 
         // カードゲージ上昇
@@ -376,6 +456,7 @@ export const useGameStore = create<GameStore>()(
               ...session.cardGauge,
               current: newGaugeCurrent,
             },
+            currentInjury: newInjury,
             character: {
               ...session.character,
               stats: updatedStats,
@@ -527,14 +608,29 @@ export const useGameStore = create<GameStore>()(
             cafeteria.level
           : 0;
 
-        // 次週の練習参加者を決定
-        const newParticipants = assignTrainingParticipants(session.supportDeck);
+        // 次週の練習配置を決定
+        const newPositions = assignTrainingPositions(session.supportDeck);
+        const newParticipants = getTrainingParticipants(newPositions);
+
+        // 怪我の回復チェック
+        let updatedInjury = session.currentInjury;
+        if (updatedInjury) {
+          updatedInjury = {
+            ...updatedInjury,
+            remainingWeeks: updatedInjury.remainingWeeks - 1,
+          };
+          if (updatedInjury.remainingWeeks <= 0) {
+            updatedInjury = null; // 怪我が完治
+          }
+        }
 
         set({
           currentSession: {
             ...session,
             currentWeek: session.currentWeek + 1,
             trainingParticipants: newParticipants,
+            trainingPositions: newPositions,
+            currentInjury: updatedInjury,
             character: {
               ...session.character,
               condition: {
@@ -993,6 +1089,59 @@ export const useGameStore = create<GameStore>()(
             },
           },
         });
+      },
+
+      // === レアスキル ===
+      checkRareSkillAcquisition: () => {
+        const session = get().currentSession;
+        if (!session) return [];
+
+        const available: { characterId: string; skillId: string }[] = [];
+        session.supportDeck.forEach((support) => {
+          if (canAcquireRareSkill(
+            support.character.id,
+            support.bondLevel,
+            session.acquiredRareSkills
+          )) {
+            const rareSkillConfig = getRareSkillByCharacterId(support.character.id);
+            if (rareSkillConfig) {
+              available.push({
+                characterId: support.character.id,
+                skillId: rareSkillConfig.rareSkill.id,
+              });
+            }
+          }
+        });
+        return available;
+      },
+
+      acquireRareSkill: (characterId) => {
+        const session = get().currentSession;
+        if (!session) return null;
+
+        const rareSkillConfig = getRareSkillByCharacterId(characterId);
+        if (!rareSkillConfig) return null;
+
+        // 既に獲得済みかチェック
+        if (session.acquiredRareSkills.includes(rareSkillConfig.rareSkill.id)) {
+          return null;
+        }
+
+        // カードを生成
+        const card = createRareSkillCard(rareSkillConfig.rareSkill);
+
+        set({
+          currentSession: {
+            ...session,
+            acquiredRareSkills: [...session.acquiredRareSkills, rareSkillConfig.rareSkill.id],
+            character: {
+              ...session.character,
+              cards: [...session.character.cards, card],
+            },
+          },
+        });
+
+        return card;
       },
 
       // === コンディション ===

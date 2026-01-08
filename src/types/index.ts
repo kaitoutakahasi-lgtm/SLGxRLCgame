@@ -350,6 +350,7 @@ export interface LessonAction {
   targetStyle: Style | 'all';
   baseEffect: { min: number; max: number };
   baseFatigue: number;
+  baseInjuryRate: number; // 怪我基礎確率 (0-100)
   unlockCondition?: UnlockCondition;
 }
 
@@ -553,6 +554,15 @@ export interface TrainingSession {
 
   // 練習参加サポート（今週の練習にいるサポート）
   trainingParticipants: string[];
+
+  // 練習ごとのサポート配置（タッグ練習用）
+  trainingPositions: TrainingPositions;
+
+  // 現在の怪我状態
+  currentInjury: { type: InjuryType; remainingWeeks: number } | null;
+
+  // 獲得済みレアスキル
+  acquiredRareSkills: string[];
 }
 
 // ===========================
@@ -609,3 +619,82 @@ export const PERSONALITY_PASSIVES: Record<PersonalityType, { description: string
   perfectionist: { description: 'アピール+1', condition: '妨害未受時' },
   moodmaker: { description: 'ボルテージ獲得+1', condition: '常時' },
 };
+
+// ===========================
+// 練習配置システム
+// ===========================
+
+/** 練習ごとのサポート配置 */
+export interface TrainingPositions {
+  dance_lesson: string[];
+  vocal_lesson: string[];
+  expression_lesson: string[];
+  study_lesson: string[];
+  physical_training: string[];
+  general_lesson: string[];
+}
+
+// ===========================
+// 怪我システム
+// ===========================
+
+/** 怪我の種類 */
+export type InjuryType = 'light' | 'medium' | 'heavy';
+
+/** 怪我の効果 */
+export interface InjuryEffect {
+  type: InjuryType;
+  name: string;
+  duration: number; // 週数
+  fatigueIncrease: number;
+  statPenalty: number; // 練習効果減少%
+  description: string;
+}
+
+export const INJURY_TYPES: Record<InjuryType, InjuryEffect> = {
+  light: {
+    type: 'light',
+    name: '軽い怪我',
+    duration: 1,
+    fatigueIncrease: 20,
+    statPenalty: 0,
+    description: '疲労が増加した',
+  },
+  medium: {
+    type: 'medium',
+    name: '怪我',
+    duration: 2,
+    fatigueIncrease: 30,
+    statPenalty: 30,
+    description: '練習効果が下がった',
+  },
+  heavy: {
+    type: 'heavy',
+    name: '重傷',
+    duration: 3,
+    fatigueIncrease: 50,
+    statPenalty: 50,
+    description: '練習効果が大きく下がった',
+  },
+};
+
+// ===========================
+// レアスキル（金特）システム
+// ===========================
+
+/** レアスキル */
+export interface RareSkill {
+  id: string;
+  name: string;
+  description: string;
+  effect: CardEffect[];
+  requiredBond: number; // 必要絆レベル（通常100）
+  sourceCharacterId: string;
+}
+
+/** サポートキャラのレアスキル設定 */
+export interface SupportRareSkill {
+  rareSkill: RareSkill;
+  hintLevel: number; // ヒントで獲得しやすさ (1-5)
+  alternativeSkills?: RareSkill[]; // 代替で獲得できるスキル
+}

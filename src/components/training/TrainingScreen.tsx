@@ -12,6 +12,9 @@ import {
   getAvailableBondLessons,
   getStyleName,
   generateCardChoices,
+  calculateInjuryRate,
+  getInjuryRateColor,
+  calculateTagBonus,
 } from '../../data';
 import { FACILITIES, calculateFacilityUpgradeCost } from '../../data/facilities';
 import { determineEndingType } from '../../data/scenarios';
@@ -25,6 +28,8 @@ import {
   BOND_THRESHOLDS,
   Card as CardType,
   CharacterStats,
+  INJURY_TYPES,
+  TrainingPositions,
 } from '../../types';
 import './TrainingScreen.css';
 
@@ -56,8 +61,11 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
   const addCard = useGameStore((state) => state.addCard);
   const checkScenarioEvent = useGameStore((state) => state.checkScenarioEvent);
   const setScenarioFlag = useGameStore((state) => state.setScenarioFlag);
+  const checkRareSkillAcquisition = useGameStore((state) => state.checkRareSkillAcquisition);
+  const acquireRareSkill = useGameStore((state) => state.acquireRareSkill);
 
   const [activeTab, setActiveTab] = useState<ActionTab>('lesson');
+  const [rareSkillAcquired, setRareSkillAcquired] = useState<CardType | null>(null);
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const [showCardGaugeModal, setShowCardGaugeModal] = useState(false);
   const [cardChoices, setCardChoices] = useState<CardType[]>([]);
@@ -76,6 +84,8 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
     supportDeck,
     cardGauge,
     trainingParticipants,
+    trainingPositions,
+    currentInjury,
     currentEvent,
   } = session;
 
@@ -125,21 +135,38 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
     });
   }, [supportDeck]);
 
+  // レアスキル獲得チェック（絆100到達時）
+  useEffect(() => {
+    if (currentEvent || rareSkillAcquired) return;
+
+    const availableSkills = checkRareSkillAcquisition();
+    if (availableSkills.length > 0) {
+      // 最初の獲得可能なスキルを取得
+      const acquired = acquireRareSkill(availableSkills[0].characterId);
+      if (acquired) {
+        setRareSkillAcquired(acquired);
+      }
+    }
+  }, [supportDeck, currentEvent, rareSkillAcquired]);
+
   const handleLessonAction = (lesson: LessonAction) => {
     const baseEffect = Math.floor(
       Math.random() * (lesson.baseEffect.max - lesson.baseEffect.min + 1) +
         lesson.baseEffect.min
     );
-    // 練習に参加しているサポートを渡す
+    // この練習に配置されているサポートを取得
+    const lessonPositions = trainingPositions?.[lesson.id as keyof TrainingPositions] || [];
     const participatingSupports = supportDeck
-      .filter(s => trainingParticipants.includes(s.character.id))
+      .filter(s => lessonPositions.includes(s.character.id))
       .map(s => s.character.id);
 
     performLesson(
       lesson.targetStyle as Style | 'all',
       baseEffect,
       lesson.baseFatigue,
-      participatingSupports
+      participatingSupports,
+      lesson.id,
+      lesson.baseInjuryRate
     );
     advanceWeek();
     setSelectedAction(null);
@@ -347,14 +374,36 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
     );
   }
 
+  // 設備による怪我率軽減を取得
+  const getInjuryReduction = () => {
+    const medicalRoom = facilities.find((f) => f.facilityId === 'medical_room');
+    if (!medicalRoom) return 0;
+    const facility = FACILITIES.find((f) => f.id === 'medical_room');
+    const effect = facility?.effects.find((e) => e.type === 'injury_reduction');
+    return effect ? effect.valuePerLevel * medicalRoom.level : 0;
+  };
+
   const renderLessonTab = () => (
     <div className="training-actions__grid">
       {availableLessons.map((lesson) => {
-        // この練習に参加しているサポートをチェック
+        // この練習に配置されているサポートを取得
+        const lessonPositions = trainingPositions?.[lesson.id as keyof TrainingPositions] || [];
         const participatingSupports = supportDeck.filter(
-          s => trainingParticipants.includes(s.character.id) &&
-               s.bonus.specialtyStyle === lesson.targetStyle
+          s => lessonPositions.includes(s.character.id)
         );
+
+        // タッグボーナスを計算
+        const { bonus: tagBonus } = trainingPositions
+          ? calculateTagBonus(lesson.id, trainingPositions, supportDeck)
+          : { bonus: 0 };
+
+        // 怪我率を計算
+        const injuryRate = calculateInjuryRate(
+          lesson.baseInjuryRate,
+          character.condition.fatigue,
+          getInjuryReduction()
+        );
+        const injuryColor = getInjuryRateColor(injuryRate);
 
         return (
           <Card
@@ -363,20 +412,38 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
             selected={selectedAction === lesson.id}
           >
             <div className="training-action">
-              <strong>{lesson.name}</strong>
+              <div className="training-action__header-row">
+                <strong>{lesson.name}</strong>
+                {tagBonus > 0 && (
+                  <span className="training-action__tag-bonus">タッグ+{tagBonus}%</span>
+                )}
+              </div>
               <span className="training-action__style">
                 {lesson.targetStyle === 'all' ? '全スタイル' : getStyleName(lesson.targetStyle as Style)}
               </span>
               <span className="training-action__effect">
                 効果: {lesson.baseEffect.min}〜{lesson.baseEffect.max}
               </span>
-              <span className="training-action__fatigue">
-                疲労: +{lesson.baseFatigue}
-              </span>
+              <div className="training-action__row">
+                <span className="training-action__fatigue">
+                  疲労: +{lesson.baseFatigue}
+                </span>
+                <span
+                  className="training-action__injury"
+                  style={{ color: injuryColor }}
+                  title={`基礎${lesson.baseInjuryRate}% + 疲労補正`}
+                >
+                  怪我率: {injuryRate}%
+                </span>
+              </div>
               {participatingSupports.length > 0 && (
                 <div className="training-action__supports">
                   {participatingSupports.map(s => (
-                    <span key={s.character.id} className="support-icon" title={s.character.name}>
+                    <span
+                      key={s.character.id}
+                      className={`support-icon ${s.bondLevel >= (s.bonus.friendshipThreshold || BOND_THRESHOLDS.FRIENDSHIP) ? 'friendship' : ''}`}
+                      title={`${s.character.name} (絆${s.bondLevel})`}
+                    >
                       {s.character.name.charAt(0)}
                     </span>
                   ))}
@@ -582,6 +649,30 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
         </Modal>
       )}
 
+      {/* レアスキル（金特）獲得モーダル */}
+      {rareSkillAcquired && (
+        <Modal isOpen={!!rareSkillAcquired} onClose={() => setRareSkillAcquired(null)}>
+          <div className="rare-skill-modal">
+            <div className="rare-skill-modal__icon">
+              <span>金</span>
+            </div>
+            <h2>レアスキル獲得！</h2>
+            <div className="rare-skill-modal__card">
+              <div className={`card-choice__style ${rareSkillAcquired.style}`}>
+                {getStyleName(rareSkillAcquired.style)}
+              </div>
+              <h3>{rareSkillAcquired.name}</h3>
+              <p>{rareSkillAcquired.description}</p>
+              <div className="card-choice__stats">
+                <span>コスト: {rareSkillAcquired.cost}</span>
+                <span>必要ランク: {rareSkillAcquired.requiredRank}</span>
+              </div>
+            </div>
+            <Button onClick={() => setRareSkillAcquired(null)}>OK</Button>
+          </div>
+        </Modal>
+      )}
+
       <div className="training-screen__header">
         <div className="training-screen__week">
           第{currentWeek}週 / {maxWeeks}週
@@ -626,6 +717,13 @@ export const TrainingScreen: React.FC<TrainingScreenProps> = ({
                   max={100}
                   color="purple"
                 />
+                {currentInjury && (
+                  <div className="training-injury-status">
+                    <span className="injury-icon">🩹</span>
+                    <span className="injury-name">{INJURY_TYPES[currentInjury.type].name}</span>
+                    <span className="injury-remaining">残り{currentInjury.remainingWeeks}週</span>
+                  </div>
+                )}
               </div>
             </Card>
 

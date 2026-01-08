@@ -13,6 +13,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'cool',
     baseEffect: { min: 20, max: 40 },
     baseFatigue: 10,
+    baseInjuryRate: 3,
   },
   {
     type: 'lesson',
@@ -21,6 +22,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'elegant',
     baseEffect: { min: 20, max: 40 },
     baseFatigue: 10,
+    baseInjuryRate: 2,
   },
   {
     type: 'lesson',
@@ -29,6 +31,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'cute',
     baseEffect: { min: 20, max: 40 },
     baseFatigue: 10,
+    baseInjuryRate: 1,
   },
   {
     type: 'lesson',
@@ -37,6 +40,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'clever',
     baseEffect: { min: 20, max: 40 },
     baseFatigue: 10,
+    baseInjuryRate: 0,
   },
   {
     type: 'lesson',
@@ -45,6 +49,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'passion',
     baseEffect: { min: 20, max: 40 },
     baseFatigue: 10,
+    baseInjuryRate: 5,
   },
   {
     type: 'lesson',
@@ -53,6 +58,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'all',
     baseEffect: { min: 15, max: 30 },
     baseFatigue: 15,
+    baseInjuryRate: 2,
   },
 
   // 上級レッスン
@@ -63,6 +69,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'cool',
     baseEffect: { min: 40, max: 70 },
     baseFatigue: 15,
+    baseInjuryRate: 5,
     unlockCondition: { type: 'facility_total', value: 10 },
   },
   {
@@ -72,6 +79,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'elegant',
     baseEffect: { min: 40, max: 70 },
     baseFatigue: 15,
+    baseInjuryRate: 4,
     unlockCondition: { type: 'facility_total', value: 10 },
   },
   {
@@ -81,6 +89,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'cute',
     baseEffect: { min: 40, max: 70 },
     baseFatigue: 15,
+    baseInjuryRate: 2,
     unlockCondition: { type: 'facility_total', value: 10 },
   },
   {
@@ -90,6 +99,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'clever',
     baseEffect: { min: 40, max: 70 },
     baseFatigue: 15,
+    baseInjuryRate: 0,
     unlockCondition: { type: 'facility_total', value: 10 },
   },
   {
@@ -99,6 +109,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'passion',
     baseEffect: { min: 40, max: 70 },
     baseFatigue: 15,
+    baseInjuryRate: 8,
     unlockCondition: { type: 'facility_total', value: 10 },
   },
 
@@ -110,6 +121,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'cool',
     baseEffect: { min: 70, max: 120 },
     baseFatigue: 25,
+    baseInjuryRate: 10,
     unlockCondition: { type: 'facility_total', value: 20 },
   },
   {
@@ -119,6 +131,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'elegant',
     baseEffect: { min: 70, max: 120 },
     baseFatigue: 25,
+    baseInjuryRate: 8,
     unlockCondition: { type: 'facility_total', value: 20 },
   },
   {
@@ -128,6 +141,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'cute',
     baseEffect: { min: 70, max: 120 },
     baseFatigue: 25,
+    baseInjuryRate: 5,
     unlockCondition: { type: 'facility_total', value: 20 },
   },
   {
@@ -137,6 +151,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'clever',
     baseEffect: { min: 70, max: 120 },
     baseFatigue: 25,
+    baseInjuryRate: 2,
     unlockCondition: { type: 'facility_total', value: 20 },
   },
   {
@@ -146,6 +161,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'passion',
     baseEffect: { min: 70, max: 120 },
     baseFatigue: 25,
+    baseInjuryRate: 15,
     unlockCondition: { type: 'facility_total', value: 20 },
   },
 
@@ -157,6 +173,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'cool',
     baseEffect: { min: 120, max: 200 },
     baseFatigue: 40,
+    baseInjuryRate: 18,
     unlockCondition: { type: 'facility_total', value: 30 },
   },
   {
@@ -166,6 +183,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'elegant',
     baseEffect: { min: 120, max: 200 },
     baseFatigue: 40,
+    baseInjuryRate: 15,
     unlockCondition: { type: 'facility_total', value: 30 },
   },
   {
@@ -175,6 +193,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'cute',
     baseEffect: { min: 120, max: 200 },
     baseFatigue: 40,
+    baseInjuryRate: 10,
     unlockCondition: { type: 'facility_total', value: 30 },
   },
   {
@@ -184,6 +203,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'clever',
     baseEffect: { min: 120, max: 200 },
     baseFatigue: 40,
+    baseInjuryRate: 5,
     unlockCondition: { type: 'facility_total', value: 30 },
   },
   {
@@ -193,6 +213,7 @@ export const LESSON_ACTIONS: LessonAction[] = [
     targetStyle: 'passion',
     baseEffect: { min: 120, max: 200 },
     baseFatigue: 40,
+    baseInjuryRate: 25,
     unlockCondition: { type: 'facility_total', value: 30 },
   },
 ];
@@ -397,4 +418,154 @@ export const STYLE_NAMES: Record<Style, string> = {
 
 export const getStyleName = (style: Style): string => {
   return STYLE_NAMES[style];
+};
+
+// ===========================
+// 怪我率計算
+// ===========================
+
+import { InjuryType, TrainingPositions, LessonAction as LessonActionType } from '../types';
+
+/**
+ * 怪我率を計算
+ * @param baseRate 基礎怪我率
+ * @param fatigue 現在の疲労度
+ * @param facilityReduction 設備による軽減%
+ * @returns 最終怪我率 (0-100)
+ */
+export const calculateInjuryRate = (
+  baseRate: number,
+  fatigue: number,
+  facilityReduction: number = 0
+): number => {
+  // 疲労による怪我率増加: 疲労50以上で増加開始
+  let fatigueModifier = 0;
+  if (fatigue >= 80) {
+    fatigueModifier = 30; // 疲労80以上: +30%
+  } else if (fatigue >= 60) {
+    fatigueModifier = 15; // 疲労60以上: +15%
+  } else if (fatigue >= 50) {
+    fatigueModifier = 5; // 疲労50以上: +5%
+  }
+
+  const rate = (baseRate + fatigueModifier) * (1 - facilityReduction / 100);
+  return Math.max(0, Math.min(100, Math.round(rate)));
+};
+
+/**
+ * 怪我判定を行う
+ * @param injuryRate 怪我率
+ * @returns 怪我の種類（怪我しない場合はnull）
+ */
+export const checkInjury = (injuryRate: number): InjuryType | null => {
+  const roll = Math.random() * 100;
+  if (roll >= injuryRate) {
+    return null; // 怪我なし
+  }
+
+  // 怪我の種類を決定
+  const severityRoll = Math.random() * 100;
+  if (severityRoll < 70) {
+    return 'light'; // 70%で軽い怪我
+  } else if (severityRoll < 95) {
+    return 'medium'; // 25%で怪我
+  } else {
+    return 'heavy'; // 5%で重傷
+  }
+};
+
+/**
+ * 怪我率の色を取得
+ */
+export const getInjuryRateColor = (rate: number): string => {
+  if (rate === 0) return '#4ade80'; // 緑（安全）
+  if (rate <= 5) return '#a3e635'; // 黄緑
+  if (rate <= 15) return '#fbbf24'; // 黄色
+  if (rate <= 30) return '#f97316'; // オレンジ
+  return '#ef4444'; // 赤（危険）
+};
+
+// ===========================
+// 練習配置システム
+// ===========================
+
+const BASIC_LESSON_IDS = [
+  'dance_lesson',
+  'vocal_lesson',
+  'expression_lesson',
+  'study_lesson',
+  'physical_training',
+  'general_lesson',
+];
+
+const STYLE_TO_LESSON: Record<Style, string> = {
+  cool: 'dance_lesson',
+  elegant: 'vocal_lesson',
+  cute: 'expression_lesson',
+  clever: 'study_lesson',
+  passion: 'physical_training',
+};
+
+/**
+ * サポートキャラを各練習に配置する
+ * 得意スタイルの練習に配置されやすい
+ */
+export const assignTrainingPositions = (
+  supportDeck: SupportCharacter[]
+): TrainingPositions => {
+  const positions: TrainingPositions = {
+    dance_lesson: [],
+    vocal_lesson: [],
+    expression_lesson: [],
+    study_lesson: [],
+    physical_training: [],
+    general_lesson: [],
+  };
+
+  supportDeck.forEach((support) => {
+    // 得意スタイルに基づく配置確率
+    const specialtyLesson = STYLE_TO_LESSON[support.bonus.specialtyStyle];
+    const specialtyRate = support.bonus.specialtyRate || 50;
+
+    // 配置先を決定
+    const roll = Math.random() * 100;
+    let assignedLesson: string;
+
+    if (roll < specialtyRate) {
+      // 得意練習に配置
+      assignedLesson = specialtyLesson;
+    } else if (roll < specialtyRate + 10) {
+      // 総合レッスンに配置
+      assignedLesson = 'general_lesson';
+    } else {
+      // ランダムに配置
+      const otherLessons = BASIC_LESSON_IDS.filter(l => l !== specialtyLesson);
+      assignedLesson = otherLessons[Math.floor(Math.random() * otherLessons.length)];
+    }
+
+    positions[assignedLesson as keyof TrainingPositions].push(support.character.id);
+  });
+
+  return positions;
+};
+
+/**
+ * タッグ練習ボーナスを計算
+ * 同じ練習に複数のサポートがいる場合ボーナス
+ */
+export const calculateTagBonus = (
+  lessonId: string,
+  positions: TrainingPositions,
+  supportDeck: SupportCharacter[]
+): { bonus: number; participants: SupportCharacter[] } => {
+  const participantIds = positions[lessonId as keyof TrainingPositions] || [];
+  const participants = supportDeck.filter(s => participantIds.includes(s.character.id));
+
+  let bonus = 0;
+  if (participants.length >= 2) {
+    // 2人以上でタッグボーナス発動
+    bonus = 10 * (participants.length - 1); // 1人追加ごとに+10%
+  }
+
+  return { bonus, participants };
 };

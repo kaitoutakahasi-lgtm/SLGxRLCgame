@@ -3,3 +3,4 @@ export * from './cards';
 export * from './facilities';
 export * from './actions';
 export * from './events';
+export * from './rareSkills';
