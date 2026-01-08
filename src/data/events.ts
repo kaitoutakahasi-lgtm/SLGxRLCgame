@@ -41,7 +41,7 @@ export const SCENARIO_EVENTS: GameEvent[] = [
       { speaker: 'producer', text: 'うん、いい感じだよ。基礎が一番大事だからね。' },
       { speaker: 'player', text: '難しいけど...楽しいです！', emotion: 'happy' },
     ],
-    triggerCondition: { type: 'week', week: 3 },
+    triggerCondition: { type: 'week', week: 5 },
     choices: [
       { id: 'lesson_a', text: 'もっと練習したい！', effects: [{ type: 'stats', target: 'passion', value: 15 }, { type: 'condition', target: 'fatigue', value: 10 }] },
       { id: 'lesson_b', text: '復習をしっかり', effects: [{ type: 'stats', target: 'clever', value: 15 }] },
@@ -61,7 +61,7 @@ export const SCENARIO_EVENTS: GameEvent[] = [
       { speaker: 'producer', text: '壁にぶつかってるんだね。でも、それは成長の証だよ。' },
       { speaker: 'player', text: 'そう...なんですか？' },
     ],
-    triggerCondition: { type: 'week', week: 6 },
+    triggerCondition: { type: 'week', week: 10 },
     choices: [
       { id: 'wall_a', text: '今こそ追い込み時！', effects: [{ type: 'stats', target: 'passion', value: 25 }, { type: 'condition', target: 'fatigue', value: 15 }] },
       { id: 'wall_b', text: '少し休もう', effects: [{ type: 'condition', target: 'fatigue', value: -20 }, { type: 'condition', target: 'mental', value: 15 }] },
@@ -81,7 +81,7 @@ export const SCENARIO_EVENTS: GameEvent[] = [
       { speaker: 'player', text: 'あの子、すごく上手い...', emotion: 'surprised' },
       { speaker: 'player', text: '負けたくない...！', emotion: 'angry' },
     ],
-    triggerCondition: { type: 'week', week: 9 },
+    triggerCondition: { type: 'week', week: 15 },
     choices: [
       { id: 'rival_a', text: '絶対に負けない！', effects: [{ type: 'condition', target: 'motivation', value: 25 }, { type: 'stats', target: 'passion', value: 15 }] },
       { id: 'rival_b', text: 'いいところを学ぼう', effects: [{ type: 'stats', target: 'clever', value: 20 }] },
@@ -101,7 +101,7 @@ export const SCENARIO_EVENTS: GameEvent[] = [
       { speaker: 'player', text: '緊張する...', emotion: 'shy' },
       { speaker: 'producer', text: '今まで頑張ってきたことを、そのまま出せばいい。' },
     ],
-    triggerCondition: { type: 'week', week: 13 },
+    triggerCondition: { type: 'week', week: 24 },
     choices: [
       { id: 'mid_a', text: '全力でアピール！', effects: [{ type: 'stats', target: 'passion', value: 20 }, { type: 'stats', target: 'cute', value: 15 }] },
       { id: 'mid_b', text: '冷静に実力を出す', effects: [{ type: 'stats', target: 'cool', value: 20 }, { type: 'stats', target: 'clever', value: 15 }] },
@@ -121,7 +121,7 @@ export const SCENARIO_EVENTS: GameEvent[] = [
       { speaker: 'player', text: 'そうですか？', emotion: 'shy' },
       { speaker: 'producer', text: '新しいことに挑戦してみないか？' },
     ],
-    triggerCondition: { type: 'week', week: 16 },
+    triggerCondition: { type: 'week', week: 29 },
     choices: [
       { id: 'poss_a', text: 'ダンスを極めたい', effects: [{ type: 'stats', target: 'passion', value: 25 }, { type: 'stats', target: 'cool', value: 15 }] },
       { id: 'poss_b', text: '表現力を磨きたい', effects: [{ type: 'stats', target: 'elegant', value: 25 }, { type: 'stats', target: 'cute', value: 15 }] },
@@ -141,7 +141,7 @@ export const SCENARIO_EVENTS: GameEvent[] = [
       { speaker: 'producer', text: '失敗は誰にでもある。大事なのはここからだ。' },
       { speaker: 'player', text: 'でも...みんなに迷惑を...', emotion: 'sad' },
     ],
-    triggerCondition: { type: 'week', week: 18 },
+    triggerCondition: { type: 'week', week: 34 },
     choices: [
       { id: 'set_a', text: 'もう一度やり直す', effects: [{ type: 'condition', target: 'motivation', value: 20 }, { type: 'stats', target: 'passion', value: 20 }] },
       { id: 'set_b', text: '原因を分析する', effects: [{ type: 'stats', target: 'clever', value: 25 }, { type: 'condition', target: 'mental', value: 15 }] },
@@ -161,7 +161,7 @@ export const SCENARIO_EVENTS: GameEvent[] = [
       { speaker: 'producer', text: 'うん、聞かせてくれ。' },
       { speaker: 'player', text: '絶対に諦めない！', emotion: 'happy' },
     ],
-    triggerCondition: { type: 'week', week: 20 },
+    triggerCondition: { type: 'week', week: 39 },
     choices: [
       { id: 'come_a', text: '強い自分になる', effects: [{ type: 'stats', target: 'passion', value: 30 }, { type: 'condition', target: 'motivation', value: 30 }] },
       { id: 'come_b', text: '自分らしさを大切に', effects: [{ type: 'stats', target: 'elegant', value: 20 }, { type: 'stats', target: 'cute', value: 20 }] },
@@ -181,7 +181,7 @@ export const SCENARIO_EVENTS: GameEvent[] = [
       { speaker: 'producer', text: '最後の仕上げだ。どこを重点的にやる？' },
       { speaker: 'player', text: '全部出し切りたいです。' },
     ],
-    triggerCondition: { type: 'week', week: 24 },
+    triggerCondition: { type: 'week', week: 44 },
     choices: [
       { id: 'prep_a', text: 'バランス良く', effects: [{ type: 'stats', target: 'cool', value: 15 }, { type: 'stats', target: 'elegant', value: 15 }, { type: 'stats', target: 'cute', value: 15 }] },
       { id: 'prep_b', text: '得意分野を伸ばす', effects: [{ type: 'stats', target: 'passion', value: 30 }, { type: 'stats', target: 'clever', value: 20 }] },
@@ -202,7 +202,7 @@ export const SCENARIO_EVENTS: GameEvent[] = [
       { speaker: 'producer', text: 'ここまでよく頑張った。明日は思い切り楽しんでこい。' },
       { speaker: 'player', text: 'はい！最高のステージにします！', emotion: 'happy' },
     ],
-    triggerCondition: { type: 'week', week: 26 },
+    triggerCondition: { type: 'week', week: 48 },
     choices: [
       { id: 'final_a', text: 'ゆっくり休む', effects: [{ type: 'condition', target: 'fatigue', value: -30 }, { type: 'condition', target: 'mental', value: 30 }] },
       { id: 'final_b', text: '最後の確認', effects: [{ type: 'condition', target: 'motivation', value: 40 }] },
@@ -1050,7 +1050,7 @@ export const WEEKLY_EVENTS: GameEvent[] = [
       '振り返ると、成長を実感できる。',
       '「後半も頑張りましょう！」',
     ],
-    triggerCondition: { type: 'week', week: 13 },
+    triggerCondition: { type: 'week', week: 24 },
     choices: [
       {
         id: 'weekly_mid_1_a',
@@ -1082,7 +1082,7 @@ export const WEEKLY_EVENTS: GameEvent[] = [
       '今までの全てをぶつける時が来た。',
       '「プロデューサーさん、最後まで見届けてください！」',
     ],
-    triggerCondition: { type: 'week', week: 26 },
+    triggerCondition: { type: 'week', week: 48 },
     choices: [
       {
         id: 'weekly_final_1_a',
@@ -1352,9 +1352,9 @@ export interface EventSelectionContext {
 
 /**
  * イベントを選択（均等確率・自己紹介優先）
- * - 全イベントは等しい確率で発生
- * - ただし自己紹介イベントが未完了なら優先
- * - 合計発生率は約60%
+ * - 利用可能なイベントがあれば必ず発生（100%）
+ * - 自己紹介 > シナリオ > 絆 > ランダム の優先順
+ * - ランダムイベントは均等確率で選択
  */
 export const selectEventWithEqualProbability = (
   context: EventSelectionContext
@@ -1392,13 +1392,7 @@ export const selectEventWithEqualProbability = (
     }
   }
 
-  // 4. ランダムイベント選択（均等確率）
-  // 合計60%の確率でイベント発生
-  const eventChance = Math.random() * 100;
-  if (eventChance > 60) {
-    return null; // イベント発生なし
-  }
-
+  // 4. ランダムイベント選択（均等確率・100%発生）
   // 利用可能なイベントを収集
   const availableEvents: GameEvent[] = [];
 
