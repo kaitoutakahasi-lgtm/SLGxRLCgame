@@ -497,6 +497,7 @@ export interface ScenarioProgress {
   currentPhase: number;
   activeScenarioId: string | null;
   completedBranches: string[];
+  completedEventIds: string[];
   flags: Record<string, boolean>;
 }
 

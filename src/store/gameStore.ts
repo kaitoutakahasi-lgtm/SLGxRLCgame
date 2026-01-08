@@ -35,7 +35,7 @@ import {
 } from '../types';
 import { getStarterDeck } from '../data/cards';
 import { getTotalLessonBonus, FACILITIES } from '../data/facilities';
-import { checkScenarioConditions, ScenarioEvent } from '../data/scenarios';
+import { SCENARIO_EVENTS } from '../data/events';
 import { assignTrainingPositions, checkInjury, calculateTagBonus } from '../data/actions';
 import { canAcquireRareSkill, createRareSkillCard, getRareSkillByCharacterId } from '../data/rareSkills';
 
@@ -85,6 +85,7 @@ const createInitialScenarioProgress = (): ScenarioProgress => ({
   currentPhase: 1,
   activeScenarioId: null,
   completedBranches: [],
+  completedEventIds: [],
   flags: {},
 });
 
@@ -185,7 +186,7 @@ interface GameStore extends GameState {
   setCurrentEvent: (event: GameEvent | null) => void;
   processEventChoice: (choice: EventChoice) => void;
   setScenarioFlag: (flagName: string, value: boolean) => void;
-  checkScenarioEvent: () => ScenarioEvent | null;
+  checkScenarioEvent: () => GameEvent | null;
 
   // 設備
   purchaseFacility: (facilityId: string) => boolean;
@@ -1001,6 +1002,9 @@ export const useGameStore = create<GameStore>()(
             scenario: {
               ...session.scenario,
               flags: updatedFlags,
+              completedEventIds: session.currentEvent?.eventType === 'scenario'
+                ? [...(session.scenario.completedEventIds || []), session.currentEvent.id]
+                : session.scenario.completedEventIds || [],
             },
             currentEvent: null,
           },
@@ -1029,30 +1033,19 @@ export const useGameStore = create<GameStore>()(
         const session = get().currentSession;
         if (!session) return null;
 
-        // 現在のステータスを収集
         const currentWeek = session.currentWeek;
-        const stats = session.character.stats;
-        const flags = session.scenario.flags;
-        const currentRank = session.character.rank;
-        const fame = session.fame;
+        const completedEventIds = session.scenario.completedEventIds || [];
 
-        // サポートキャラの絆レベルを収集
-        const supportBonds: Record<string, number> = {};
-        session.supportDeck.forEach((support) => {
-          supportBonds[support.character.id] = support.bondLevel;
+        // 週固定シナリオイベントをチェック
+        const scenarioEvent = SCENARIO_EVENTS.find((event) => {
+          // この週のイベントか確認
+          if (event.triggerCondition?.week !== currentWeek) return false;
+          // 未完了のイベントのみ
+          if (completedEventIds.includes(event.id)) return false;
+          return true;
         });
 
-        // シナリオイベントをチェック
-        const scenarioEvent = checkScenarioConditions(
-          currentWeek,
-          stats,
-          flags,
-          currentRank,
-          fame,
-          supportBonds
-        );
-
-        return scenarioEvent;
+        return scenarioEvent || null;
       },
 
       // === 設備 ===
