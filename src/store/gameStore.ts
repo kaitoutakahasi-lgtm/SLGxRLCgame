@@ -355,7 +355,37 @@ export const useGameStore = create<GameStore>()(
         const facilityBonus = style === 'all'
           ? 0
           : getTotalLessonBonus(session.facilities, style);
-        const motivationBonus = session.character.condition.motivation >= 80 ? 0.5 : 0;
+
+        // ===== サポートボーナス集計 =====
+        let supportTrainingBonus = 0;   // トレーニング効果UP
+        let supportMotivationBonus = 0; // やる気効果UP
+        let supportFatigueReduction = 0; // 疲労軽減
+        let supportInjuryReduction = 0;  // 怪我率ダウン
+
+        const updatedSupportDeck = session.supportDeck.map((support) => {
+          if (participantIds.includes(support.character.id)) {
+            // 得意スタイル一致でボーナス
+            if (style !== 'all' && support.bonus.specialtyStyle === style) {
+              supportTrainingBonus += support.bonus.trainingEffectUp;
+            }
+            // やる気効果UP（参加サポート全員分）
+            supportMotivationBonus += support.bonus.motivationEffectUp || 0;
+            // 疲労軽減（参加サポート全員分）
+            supportFatigueReduction += support.bonus.fatigueReduction || 0;
+            // 怪我率ダウン（デッキ全体で常時）
+            supportInjuryReduction += support.bonus.fatigueReduction || 0; // fatigueReduction兼用
+
+            // 絆上昇
+            const newBondLevel = clamp(support.bondLevel + 2, 0, 100);
+            return { ...support, bondLevel: newBondLevel, isInTraining: true };
+          }
+          return { ...support, isInTraining: false };
+        });
+
+        // やる気ボーナス計算（サポートのmotivationEffectUpを加味）
+        const baseMotivationBonus = session.character.condition.motivation >= 80 ? 0.5 : 0;
+        const motivationBonus = baseMotivationBonus * (1 + supportMotivationBonus / 100);
+
         const fatigueEfficiency = session.character.condition.fatigue <= 30
           ? 1.0
           : session.character.condition.fatigue <= 60
@@ -371,23 +401,8 @@ export const useGameStore = create<GameStore>()(
           tagBonus = bonus;
         }
 
-        // サポートボーナス計算
-        let supportBonus = 0;
-        const updatedSupportDeck = session.supportDeck.map((support) => {
-          if (participantIds.includes(support.character.id)) {
-            // 得意スタイル一致でボーナス
-            if (style !== 'all' && support.bonus.specialtyStyle === style) {
-              supportBonus += support.bonus.trainingEffectUp;
-            }
-            // 絆上昇
-            const newBondLevel = clamp(support.bondLevel + 2, 0, 100);
-            return { ...support, bondLevel: newBondLevel, isInTraining: true };
-          }
-          return { ...support, isInTraining: false };
-        });
-
         const finalEffect = Math.floor(
-          baseEffect * (1 + facilityBonus / 100 + motivationBonus + supportBonus / 100 + tagBonus / 100) * fatigueEfficiency * (1 - injuryPenalty)
+          baseEffect * (1 + facilityBonus / 100 + motivationBonus + supportTrainingBonus / 100 + tagBonus / 100) * fatigueEfficiency * (1 - injuryPenalty)
         );
 
         const updatedStats = { ...session.character.stats };
@@ -411,6 +426,11 @@ export const useGameStore = create<GameStore>()(
             ? FACILITIES.find((f) => f.id === 'medical_room')?.effects.find(e => e.type === 'injury_reduction')?.valuePerLevel || 0
             : 0;
 
+          // デッキ全体のサポートボーナスによる怪我率軽減
+          const totalSupportInjuryReduction = session.supportDeck.reduce(
+            (sum, s) => sum + (s.bonus.fatigueReduction || 0), 0
+          );
+
           // 疲労による怪我率増加を計算
           let finalInjuryRate = baseInjuryRate;
           const currentFatigue = session.character.condition.fatigue;
@@ -421,7 +441,9 @@ export const useGameStore = create<GameStore>()(
           } else if (currentFatigue >= 50) {
             finalInjuryRate += 5;
           }
-          finalInjuryRate = finalInjuryRate * (1 - facilityReduction / 100);
+          // 設備＋サポートの軽減を適用
+          finalInjuryRate = finalInjuryRate * (1 - (facilityReduction + totalSupportInjuryReduction) / 100);
+          finalInjuryRate = Math.max(0, finalInjuryRate);
 
           const injuryResult = checkInjury(finalInjuryRate);
           if (injuryResult) {
@@ -438,9 +460,11 @@ export const useGameStore = create<GameStore>()(
           additionalFatigue = INJURY_TYPES[newInjury.type].fatigueIncrease;
         }
 
+        // 疲労計算（サポートの疲労軽減を適用）
+        const actualFatigue = Math.max(0, Math.floor(fatigue * (1 - supportFatigueReduction / 100)));
         const updatedCondition = {
           ...session.character.condition,
-          fatigue: clamp(session.character.condition.fatigue + fatigue + additionalFatigue, 0, 100),
+          fatigue: clamp(session.character.condition.fatigue + actualFatigue + additionalFatigue, 0, 100),
         };
 
         // カードゲージ上昇

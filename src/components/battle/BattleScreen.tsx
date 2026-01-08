@@ -299,6 +299,38 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ onComplete }) => {
 
         {/* 中央: バトルフィールド */}
         <div className="battle-field">
+          {/* キャラクター表示エリア */}
+          <div className="battle-characters-display">
+            {sortedParticipants.map((p, index) => (
+              <div
+                key={p.id}
+                className={`battle-character ${resolvingParticipant?.id === p.id ? 'is-active' : ''} ${p.isPlayer ? 'is-player' : ''}`}
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <div className="battle-character__sprite">
+                  {p.avatarImage ? (
+                    <img src={p.avatarImage} alt={p.name} className="battle-character__image" />
+                  ) : (
+                    <div
+                      className="battle-character__placeholder"
+                      style={{ backgroundColor: p.avatarColor }}
+                    >
+                      <span className="battle-character__initial">{p.name.charAt(0)}</span>
+                      <div className="battle-character__body" />
+                    </div>
+                  )}
+                  {/* アクティブ時のエフェクト */}
+                  {resolvingParticipant?.id === p.id && (
+                    <div className="battle-character__active-effect" />
+                  )}
+                </div>
+                <div className="battle-character__name-tag">{p.name}</div>
+                <div className="battle-character__stars">★{p.stars}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* カード解決表示 */}
           {battle.phase === 'card_resolve' && resolvingParticipant && (
             <div className="battle-resolve-display">
               <div className="battle-resolve-display__name">

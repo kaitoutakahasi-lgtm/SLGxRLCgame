@@ -506,6 +506,7 @@ export interface BattleParticipant {
   selectedCards: Card[];
   fullRecoveryUsed: boolean;
   avatarColor: string; // キャラクターの色
+  avatarImage?: string; // キャラクター画像URL（png/gif対応）
 }
 
 /** バトルフェーズ */
