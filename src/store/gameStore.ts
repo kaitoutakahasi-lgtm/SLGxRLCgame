@@ -31,6 +31,7 @@ import {
   TrainingPositions,
   InjuryType,
   INJURY_TYPES,
+  CardRarity,
 } from '../types';
 import { getStarterDeck } from '../data/cards';
 import { getTotalLessonBonus, FACILITIES } from '../data/facilities';
@@ -198,6 +199,10 @@ interface GameStore extends GameState {
   // レアスキル
   checkRareSkillAcquisition: () => { characterId: string; skillId: string }[];
   acquireRareSkill: (characterId: string) => Card | null;
+
+  // スキルヒントシステム
+  checkSkillHint: (participantIds: string[]) => SkillHint | null;
+  applySkillHint: (hint: SkillHint) => Card | null;
 
   // コンディション
   updateCondition: (updates: Partial<CharacterCondition>) => void;
@@ -653,6 +658,52 @@ export const useGameStore = create<GameStore>()(
           }
         }
 
+        // ===== イベント発生チェック =====
+        // イベント基準確率: 合計約60%（各イベント独立判定）
+        // - シナリオイベント: 10%
+        // - 絆イベント: 各サポート10%（eventRateで上昇）
+        // - ランダムイベント: 15%
+
+        let randomEvent: GameEvent | null = null;
+
+        // サポートのeventRateボーナス合計
+        const totalEventBonus = session.supportDeck.reduce(
+          (sum, s) => sum + (s.bonus.eventRate || 0), 0
+        );
+
+        // シナリオイベント判定（10%）
+        const scenarioRoll = Math.random() * 100;
+        if (scenarioRoll < 10 + totalEventBonus / 5) { // eventBonusの1/5がシナリオに影響
+          const scenarioEvent = get().checkScenarioEvent();
+          if (scenarioEvent) {
+            randomEvent = scenarioEvent;
+          }
+        }
+
+        // 絆イベント判定（未発生の場合、各サポート独立10%）
+        if (!randomEvent && !session.currentEvent) {
+          for (const support of session.supportDeck) {
+            if (!support.bondEvents) continue;
+
+            const bondEventRate = 10 + (support.bonus.eventRate || 0);
+            const bondRoll = Math.random() * 100;
+
+            if (bondRoll < bondEventRate) {
+              // 未クリアのイベントをチェック
+              if (support.bondLevel >= BOND_THRESHOLDS.EVENT_3 && !support.bondProgress.event3Cleared) {
+                randomEvent = get().triggerBondEvent(support.character.id, 3);
+                break;
+              } else if (support.bondLevel >= BOND_THRESHOLDS.EVENT_2 && !support.bondProgress.event2Cleared) {
+                randomEvent = get().triggerBondEvent(support.character.id, 2);
+                break;
+              } else if (support.bondLevel >= BOND_THRESHOLDS.EVENT_1 && !support.bondProgress.event1Cleared) {
+                randomEvent = get().triggerBondEvent(support.character.id, 1);
+                break;
+              }
+            }
+          }
+        }
+
         set({
           currentSession: {
             ...session,
@@ -660,6 +711,7 @@ export const useGameStore = create<GameStore>()(
             trainingParticipants: newParticipants,
             trainingPositions: newPositions,
             currentInjury: updatedInjury,
+            currentEvent: randomEvent,
             character: {
               ...session.character,
               condition: {
@@ -1173,6 +1225,105 @@ export const useGameStore = create<GameStore>()(
         return card;
       },
 
+      // === スキルヒントシステム ===
+      checkSkillHint: (participantIds) => {
+        const session = get().currentSession;
+        if (!session) return null;
+
+        // 参加しているサポートのhintRateを合計
+        const participatingSupports = session.supportDeck.filter(
+          s => participantIds.includes(s.character.id)
+        );
+
+        // 基礎ヒント発生率15%
+        const baseHintRate = 15;
+        const totalHintBonus = participatingSupports.reduce(
+          (sum, s) => sum + (s.bonus.hintRate || 0), 0
+        );
+        const finalHintRate = baseHintRate + totalHintBonus;
+
+        // ヒント発生判定
+        if (Math.random() * 100 >= finalHintRate) {
+          return null;
+        }
+
+        // ランダムなサポートからヒントを生成
+        const eligibleSupports = participatingSupports.filter(
+          s => s.bondLevel >= 30 // 絆30以上でヒント可能
+        );
+        if (eligibleSupports.length === 0) return null;
+
+        const support = eligibleSupports[Math.floor(Math.random() * eligibleSupports.length)];
+
+        // ヒントレベルを計算（hintEffectUpで上昇）
+        let hintLevel = 1 + Math.floor(Math.random() * 3); // 1-3
+        const hintEffectBonus = support.bonus.hintEffectUp || 0;
+        hintLevel = Math.min(5, hintLevel + Math.floor(hintEffectBonus / 20)); // 20%ごとに+1
+
+        // ヒントカードを生成
+        const styles: Style[] = ['cool', 'elegant', 'cute', 'clever', 'passion'];
+        const hintCard: Card = {
+          id: `hint_${Date.now()}`,
+          name: `${support.character.name}のヒント`,
+          description: `${support.character.name}から教わったテクニック`,
+          style: support.bonus.specialtyStyle,
+          cost: Math.max(1, 3 - Math.floor(hintLevel / 2)),
+          rarity: (hintLevel >= 4 ? 'rare' : hintLevel >= 2 ? 'uncommon' : 'common') as CardRarity,
+          requiredRank: 'E',
+          effects: [
+            { type: 'appeal', value: 2 + hintLevel, target: 'self' }
+          ],
+        };
+
+        const hint: SkillHint = {
+          supportCharacterId: support.character.id,
+          card: hintCard,
+          hintLevel,
+        };
+
+        return hint;
+      },
+
+      applySkillHint: (hint) => {
+        const session = get().currentSession;
+        if (!session) return null;
+
+        // 既にあるヒントをチェック（重複回避）
+        const existingHint = session.skillHints.find(
+          h => h.supportCharacterId === hint.supportCharacterId
+        );
+        if (existingHint) {
+          // より高いレベルのヒントに更新
+          if (hint.hintLevel > existingHint.hintLevel) {
+            set({
+              currentSession: {
+                ...session,
+                skillHints: session.skillHints.map(h =>
+                  h.supportCharacterId === hint.supportCharacterId ? hint : h
+                ),
+              },
+            });
+          }
+          return null;
+        }
+
+        // 新規ヒントを追加
+        set({
+          currentSession: {
+            ...session,
+            skillHints: [...session.skillHints, hint],
+          },
+        });
+
+        // ヒントレベル5ならカードを即獲得
+        if (hint.hintLevel >= 5) {
+          get().addCard(hint.card);
+          return hint.card;
+        }
+
+        return null;
+      },
+
       // === コンディション ===
       updateCondition: (updates) => {
         const session = get().currentSession;
@@ -1404,6 +1555,7 @@ export const useGameStore = create<GameStore>()(
 
       resolveNextParticipant: () => {
         const battle = get().currentBattle;
+        const session = get().currentSession;
         if (!battle) return false;
 
         const { currentResolveIndex, participants, trend } = battle;
@@ -1413,11 +1565,21 @@ export const useGameStore = create<GameStore>()(
         let earnedStars = 0;
         let voltageGain = 0;
 
+        // プレイヤーの場合、サポートのcontestBonusを適用
+        let contestBonus = 0;
+        if (participant.isPlayer && session) {
+          contestBonus = session.supportDeck.reduce(
+            (sum, s) => sum + (s.bonus.contestBonus || 0), 0
+          );
+        }
+
         // カード効果を計算
         participant.selectedCards.forEach((card) => {
           card.effects.forEach((effect) => {
             if (effect.type === 'appeal' && effect.target === 'self') {
-              earnedStars += effect.value;
+              // contestBonusを適用（プレイヤーのみ）
+              const baseValue = effect.value;
+              earnedStars += Math.floor(baseValue * (1 + contestBonus / 100));
             }
             if (effect.type === 'voltage') {
               voltageGain += effect.value;

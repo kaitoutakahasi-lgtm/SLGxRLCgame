@@ -29,6 +29,9 @@ export type Gender = 'male' | 'female' | 'other';
 /** カードカテゴリ */
 export type CardCategory = 'appeal' | 'sabotage' | 'defense' | 'manipulation' | 'conditional';
 
+/** カードレアリティ */
+export type CardRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+
 /** キャラクタータイプ */
 export type CharacterType = 'training' | 'support' | 'fixed' | 'trained' | 'edit';
 
@@ -293,9 +296,10 @@ export interface Card {
   id: string;
   name: string;
   description: string;
-  category: CardCategory;
+  category?: CardCategory;
   style: Style;
   cost: number;
+  rarity?: CardRarity;  // カードレアリティ
   requiredRank: Rank;
   effects: CardEffect[];
   flavorText?: string;
